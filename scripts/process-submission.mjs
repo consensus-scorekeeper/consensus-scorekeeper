@@ -23,6 +23,12 @@ import { TOURNAMENTS } from '../src/ui/roster-presets.js';
 import {
   splitCsvBundle,
   planSubmissionWrites,
+  isValidTournamentSlug,
+  deriveTournamentName,
+  buildRostersFromGames,
+  buildTournamentEntry,
+  insertTournamentEntry,
+  retargetTournamentPage,
 } from '../src/util/submission.js';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -98,13 +104,23 @@ const pasted = stripCodeFence(sections['Results CSV'] || '');
 const errors = [];
 const warnings = [];
 
-const tournament = TOURNAMENTS.find((t) => t.slug === slug);
+// A slug that isn't in the registry creates a brand-new tournament
+// (registry entry + stats page + results folder, all in the same PR) —
+// provided it's shaped like a slug at all.
+let tournament = TOURNAMENTS.find((t) => t.slug === slug);
+let isNewTournament = false;
 if (!slug) {
   errors.push('No tournament slug given.');
 } else if (!tournament) {
-  errors.push(
-    `Unknown tournament slug \`${slug}\`. Valid slugs: ${TOURNAMENTS.map((t) => `\`${t.slug}\``).join(', ')}.`
-  );
+  if (isValidTournamentSlug(slug)) {
+    isNewTournament = true;
+  } else {
+    errors.push(
+      `\`${slug}\` is not a valid tournament slug — use lowercase letters, numbers, and hyphens ` +
+      '(e.g. `bay-area-open-2026`). Existing slugs: ' +
+      TOURNAMENTS.map((t) => `\`${t.slug}\``).join(', ') + '.'
+    );
+  }
 }
 
 let attachments = { count: 0, texts: [] };
@@ -128,6 +144,29 @@ for (const [i, chunk] of chunks.entries()) {
 
 let writes = [];
 if (errors.length === 0) {
+  if (isNewTournament) {
+    // Bootstrap the tournament from the submission itself: display name
+    // from the form (or derived from the slug), rosters from the games'
+    // own team/player rows, stats page cloned from an existing one.
+    tournament = {
+      name: (sections['Tournament name'] || '').trim() || deriveTournamentName(slug),
+      slug,
+    };
+    const entry = buildTournamentEntry({
+      name: tournament.name,
+      slug,
+      description: (sections['Tournament description'] || '').trim(),
+      rosters: buildRostersFromGames(games.map((g) => g.parsed)),
+    });
+    const presetsPath = path.join(repoRoot, 'src', 'ui', 'roster-presets.js');
+    fs.writeFileSync(presetsPath, insertTournamentEntry(fs.readFileSync(presetsPath, 'utf8'), entry));
+
+    const templatePath = path.join(repoRoot, 'tournaments', TOURNAMENTS[0].slug, 'index.html');
+    const page = retargetTournamentPage(fs.readFileSync(templatePath, 'utf8'), tournament);
+    fs.mkdirSync(path.join(repoRoot, 'tournaments', slug), { recursive: true });
+    fs.writeFileSync(path.join(repoRoot, 'tournaments', slug, 'index.html'), page);
+  }
+
   // Team names are deliberately NOT checked against the tournament's
   // registry rosters: subs happen, rosters drift, and the stats
   // aggregation keys purely on the names in the CSV. The maintainer
@@ -169,6 +208,13 @@ if (errors.length > 0) {
   const added = writes.filter((w) => w.action === 'add');
   const updated = writes.filter((w) => w.action === 'update');
   lines.push(`### ✅ ${games.length} game${games.length === 1 ? '' : 's'} validated for **${tournament.name}**`, '');
+  if (isNewTournament) {
+    lines.push(
+      `- 🏆 Creates the new tournament **${tournament.name}** — once merged, its stats page ` +
+      `will be at https://consensus-scorekeeper.github.io/tournaments/${slug}/ ` +
+      '(rosters are derived from the submitted games; the maintainer can adjust them in the PR).'
+    );
+  }
   for (const w of added) lines.push(`- 🆕 \`${w.filename}\``);
   for (const w of updated) lines.push(`- ♻️ \`${w.filename}\` (replaces the previously published version of this game)`);
 }

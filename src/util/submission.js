@@ -12,6 +12,7 @@
 // inside the Action) and unit-tested in tests/submission.test.js.
 
 import { splitCsvLine } from './parse-results-csv.js';
+import { escapeHtml } from './escape.js';
 
 const BOM = '﻿';
 
@@ -71,6 +72,78 @@ export function canonicalResultsFilename(parsed) {
     'consensus-stats';
   const matchup = `${sanitize(parsed.teamA) || 'TeamA'} vs ${sanitize(parsed.teamB) || 'TeamB'}`;
   return `${packBase} - ${matchup}.csv`;
+}
+
+// ---------- new-tournament creation ----------
+// A submission whose slug isn't in the TOURNAMENTS registry creates the
+// tournament: a registry entry (rosters derived from the submitted
+// games), a stats page, and the results folder — all in the same PR.
+
+// The slug becomes a folder name and a URL path segment, so the pattern
+// is strict — it's also what makes path traversal impossible for
+// unregistered slugs.
+export function isValidTournamentSlug(slug) {
+  return typeof slug === 'string'
+    && slug.length <= 60
+    && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug);
+}
+
+// "bay-area-open-2026" → "Bay Area Open 2026". Fallback display name for
+// submissions that don't fill in the Tournament-name field.
+export function deriveTournamentName(slug) {
+  return String(slug)
+    .split('-')
+    .map((w) => (/^\d/.test(w) ? w : w.charAt(0).toUpperCase() + w.slice(1)))
+    .join(' ');
+}
+
+// Derive registry rosters from the submitted games' own team + player
+// rows: every team that appears, with its players in appearance order.
+export function buildRostersFromGames(parsedGames) {
+  const rosters = new Map();
+  for (const parsed of parsedGames) {
+    for (const team of [parsed.teamA, parsed.teamB]) {
+      if (team && !rosters.has(team)) rosters.set(team, new Set());
+    }
+    for (const p of parsed.players) {
+      if (!rosters.has(p.team)) rosters.set(p.team, new Set());
+      rosters.get(p.team).add(p.name);
+    }
+  }
+  return [...rosters].map(([name, players]) => ({ name, players: [...players] }));
+}
+
+// Serialize a registry entry as JSON — valid JS, and JSON.stringify's
+// escaping is what keeps untrusted names/descriptions from injecting
+// code into roster-presets.js (which every visitor's browser executes).
+export function buildTournamentEntry({ name, slug, description, rosters }) {
+  const entry = { name, slug };
+  if (description) entry.description = description;
+  entry.rosters = rosters;
+  return JSON.stringify(entry, null, 2);
+}
+
+// Insert an entry (from buildTournamentEntry) at the end of the
+// TOURNAMENTS array in roster-presets.js source text. Appending keeps
+// DEFAULT_TOURNAMENT (= TOURNAMENTS[0]) stable.
+export function insertTournamentEntry(source, entryJson) {
+  const open = source.indexOf('export const TOURNAMENTS = [');
+  if (open === -1) throw new Error('TOURNAMENTS array not found in roster-presets.js');
+  const close = source.indexOf('\n];', open);
+  if (close === -1) throw new Error('TOURNAMENTS array terminator not found');
+  const indented = entryJson.split('\n').map((line) => '  ' + line).join('\n');
+  return source.slice(0, close) + '\n' + indented + ',' + source.slice(close);
+}
+
+// Turn an existing per-tournament stats page into one for a new slug.
+// Only the slug <meta> matters functionally (stats-main.js stamps the
+// heading at runtime); the static <title> is retargeted for bookmarks
+// and link previews. Replacement callbacks avoid `$`-substitution
+// surprises from untrusted names.
+export function retargetTournamentPage(html, { slug, name }) {
+  return html
+    .replace(/(<meta name="tournament-slug" content=")[^"]*(">)/, (m, pre, post) => pre + slug + post)
+    .replace(/<title>[^<]*<\/title>/, () => `<title>${escapeHtml(name)} — Stats</title>`);
 }
 
 // Decide, for each submitted game, which file it should be written to.

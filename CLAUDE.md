@@ -273,8 +273,10 @@ keep in lockstep.
 
 ## Adding a new tournament
 
-The site hosts one folder per tournament under `tournaments/`. To add
-one:
+The site hosts one folder per tournament under `tournaments/`. The
+results-submission pipeline (see below) creates all of this
+automatically when someone submits games under a new slug, so the manual
+runbook is only needed for tournaments added outside that flow:
 
 1. Append a new entry to `TOURNAMENTS` in `src/ui/roster-presets.js`:
    `{ name, slug, description, rosters: [{name, players}, ...] }`. The
@@ -383,10 +385,22 @@ It runs `scripts/process-submission.mjs`, which:
    URLs — both `user-attachments/files` and legacy `/files/` links),
 2. splits pasted text + attachments into individual games
    (`splitCsvBundle` — several exports pasted back-to-back are fine),
-3. validates: slug in `TOURNAMENTS`, each game parseable with both
+3. validates: slug well-formed, each game parseable with both
    teams + players (team names are deliberately *not* checked against
    registry rosters — subs happen, and the maintainer reviews the PR),
 4. writes into `tournaments/<slug>/results/` via `planSubmissionWrites`.
+
+**A slug that isn't in `TOURNAMENTS` creates the tournament** (community
+tournaments don't need a maintainer code change): the script appends a
+registry entry to `src/ui/roster-presets.js` (name/description from the
+form's optional fields, rosters derived from the submitted games' own
+team/player rows via `buildRostersFromGames`) and generates
+`tournaments/<slug>/index.html` by retargeting the first built-in
+tournament's page. The entry is serialized with `JSON.stringify`
+(`buildTournamentEntry`), which is what keeps untrusted names from
+injecting code into a file every visitor executes; the slug itself is
+gated by `isValidTournamentSlug` (strict kebab-case), which is also the
+path-traversal guard. All of it lands in the same reviewable PR.
 
 **Game identity is content, not filename**: export filenames embed a
 timestamp, so a re-exported correction arrives under a new name. Games

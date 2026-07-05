@@ -49,7 +49,9 @@ jobs:
           git config user.name  'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
           git checkout -B "$BRANCH"
-          git add tournaments
+          # roster-presets.js is included because new-tournament
+          # submissions append a registry entry to it.
+          git add tournaments src/ui/roster-presets.js
           if git diff --cached --quiet; then
             echo "No changes — submitted games are identical to what's already published."
             echo "pr_note=No changes: every submitted game is already published with identical stats." >> "$GITHUB_OUTPUT"

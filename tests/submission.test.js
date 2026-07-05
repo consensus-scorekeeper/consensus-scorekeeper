@@ -1,11 +1,22 @@
 import { describe, it, expect } from 'vitest';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { parseResultsCsv } from '../src/util/parse-results-csv.js';
 import {
   splitCsvBundle,
   gameIdentityKey,
   canonicalResultsFilename,
   planSubmissionWrites,
+  isValidTournamentSlug,
+  deriveTournamentName,
+  buildRostersFromGames,
+  buildTournamentEntry,
+  insertTournamentEntry,
+  retargetTournamentPage,
 } from '../src/util/submission.js';
+
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 function makeCsv({ packet = 'Pack 1.pdf', teamA = 'Alphas', teamB = 'Bravos', scoreA = 40, scoreB = 20, players } = {}) {
   const playerRows = players || [
@@ -138,6 +149,102 @@ describe('planSubmissionWrites', () => {
     expect(writes[0].action).toBe('add');
   });
 
+  it('handles a bulk drop: several new games plus one correction', () => {
+    const published = asGame(makeCsv({ packet: 'Pack 1.pdf' }));
+    const games = [
+      asGame(makeCsv({ packet: 'Pack 1.pdf', scoreA: 55 })),
+      asGame(makeCsv({ packet: 'Pack 2.pdf', teamA: 'Charlies', teamB: 'Deltas' })),
+      asGame(makeCsv({ packet: 'Pack 3.pdf', teamA: 'Echoes', teamB: 'Foxtrots' })),
+    ];
+    const { writes } = planSubmissionWrites(
+      [{ filename: 'published.csv', parsed: published.parsed }],
+      games
+    );
+    expect(writes.map((w) => w.action).sort()).toEqual(['add', 'add', 'update']);
+  });
+});
+
+describe('isValidTournamentSlug', () => {
+  it('accepts kebab-case slugs', () => {
+    expect(isValidTournamentSlug('bay-area-open-2026')).toBe(true);
+    expect(isValidTournamentSlug('x')).toBe(true);
+  });
+
+  it('rejects anything unsafe as a folder name / URL segment', () => {
+    for (const bad of ['', 'Bay Area', 'UPPER', 'a--b', '-lead', 'trail-', '../etc', 'a/b', 'a.b', 'a'.repeat(61)]) {
+      expect(isValidTournamentSlug(bad), bad).toBe(false);
+    }
+  });
+});
+
+describe('deriveTournamentName', () => {
+  it('title-cases words and leaves numbers alone', () => {
+    expect(deriveTournamentName('bay-area-open-2026')).toBe('Bay Area Open 2026');
+  });
+});
+
+describe('buildRostersFromGames', () => {
+  it('unions players per team across games, in appearance order', () => {
+    const g1 = parseResultsCsv(makeCsv({
+      players: ['Alice,Alphas,30', 'Andy,Alphas,10', 'Bob,Bravos,20'],
+    }));
+    const g2 = parseResultsCsv(makeCsv({
+      teamA: 'Alphas', teamB: 'Charlies',
+      players: ['Alice,Alphas,15', 'Ana,Alphas,5', 'Cara,Charlies,25'],
+    }));
+    expect(buildRostersFromGames([g1, g2])).toEqual([
+      { name: 'Alphas', players: ['Alice', 'Andy', 'Ana'] },
+      { name: 'Bravos', players: ['Bob'] },
+      { name: 'Charlies', players: ['Cara'] },
+    ]);
+  });
+});
+
+describe('insertTournamentEntry', () => {
+  it('appends a valid, executable entry to the real roster-presets.js source', () => {
+    const source = fs.readFileSync(path.join(repoRoot, 'src', 'ui', 'roster-presets.js'), 'utf8');
+    const entry = buildTournamentEntry({
+      name: 'Injection "Test" <\'26> ${oops}',
+      slug: 'injection-test-26',
+      description: 'quotes \' " and `backticks`',
+      rosters: [{ name: 'Team </script>', players: ['P1'] }],
+    });
+    const patched = insertTournamentEntry(source, entry);
+
+    // Execute the patched module source to prove it's still valid JS.
+    // (The module has no imports; stripping `export ` keeps declarations.)
+    const mod = new Function(
+      patched.replace(/^export /gm, '') + '\nreturn { TOURNAMENTS, DEFAULT_TOURNAMENT };'
+    )();
+
+    const added = mod.TOURNAMENTS.find((t) => t.slug === 'injection-test-26');
+    expect(added).toBeTruthy();
+    expect(added.name).toBe('Injection "Test" <\'26> ${oops}');
+    expect(added.rosters).toEqual([{ name: 'Team </script>', players: ['P1'] }]);
+    // Appending must not disturb existing entries or the default.
+    expect(mod.TOURNAMENTS[0].slug).toBe(mod.DEFAULT_TOURNAMENT.slug);
+    expect(mod.TOURNAMENTS.length).toBeGreaterThan(1);
+  });
+
+  it('throws when the source has no TOURNAMENTS array', () => {
+    expect(() => insertTournamentEntry('const x = 1;', '{}')).toThrow(/TOURNAMENTS/);
+  });
+});
+
+describe('retargetTournamentPage', () => {
+  it('retargets the real template page to a new slug and name', () => {
+    const html = fs.readFileSync(
+      path.join(repoRoot, 'tournaments', 'stanford-consensus-2026', 'index.html'),
+      'utf8'
+    );
+    const out = retargetTournamentPage(html, { slug: 'bay-area-open-2026', name: 'Bay & Friends $& Open' });
+    expect(out).toContain('<meta name="tournament-slug" content="bay-area-open-2026">');
+    expect(out).toContain('<title>Bay &amp; Friends $&amp; Open — Stats</title>');
+    expect(out).not.toContain('content="stanford-consensus-2026"');
+  });
+});
+
+describe('planSubmissionWrites (bulk)', () => {
   it('handles a bulk drop: several new games plus one correction', () => {
     const published = asGame(makeCsv({ packet: 'Pack 1.pdf' }));
     const games = [

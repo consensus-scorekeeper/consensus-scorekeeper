@@ -16,16 +16,32 @@ body:
         - **Several games at once is fine**: paste them back-to-back, or attach multiple files.
         - **Corrections are fine too**: re-submitting a game (same packet, same two teams)
           replaces the previously published version instead of duplicating it.
+        - **Running your own tournament?** Pick a fresh slug below and this submission
+          creates its public stats page automatically.
 
         A bot checks the submission and replies here within a minute or two.
   - type: input
     id: tournament
     attributes:
       label: Tournament slug
-      description: The tournament's folder name in its stats-page URL, e.g. `tournaments/stanford-consensus-2026/`.
+      description: >-
+        An existing tournament's folder name from its stats-page URL (e.g.
+        `stanford-consensus-2026`), or a new slug (lowercase letters, numbers,
+        hyphens) to create a new tournament.
       placeholder: stanford-consensus-2026
     validations:
       required: true
+  - type: input
+    id: tournament-name
+    attributes:
+      label: Tournament name
+      description: Only used when creating a new tournament — the display name for its stats page (defaults to a title-cased version of the slug).
+      placeholder: Bay Area Open 2026
+  - type: input
+    id: tournament-description
+    attributes:
+      label: Tournament description
+      description: Only used when creating a new tournament — one line shown on its card on the tournaments hub.
   - type: textarea
     id: csv
     attributes:
