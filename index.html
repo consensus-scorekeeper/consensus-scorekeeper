@@ -27,6 +27,8 @@
     <span class="roster-tournament-picker" id="roster-tournament-picker" hidden>
       <label for="roster-tournament-select">Rosters from</label>
       <select id="roster-tournament-select"></select>
+      <button type="button" class="roster-manage-btn" data-action="open-roster-manager"
+              title="Create, edit, or upload your own tournament rosters">Manage</button>
     </span>
   </div>
   <h1>Consensus Scorekeeper</h1>
@@ -112,6 +114,45 @@
       <button type="button" class="btn btn-start" data-action="load-format-pack">Load pack</button>
       <span class="format-modal-status" id="format-load-status"></span>
     </div>
+  </div>
+</div>
+
+<!-- ==================== ROSTER MANAGER MODAL ==================== -->
+<div class="format-modal" id="roster-manager-modal" role="dialog" aria-modal="true" aria-labelledby="roster-manager-title">
+  <div class="format-modal-card" id="roster-manager-card" data-view="list">
+    <button class="format-modal-close" data-action="close-roster-manager" title="Close" aria-label="Close">&times;</button>
+    <h2 id="roster-manager-title">My tournaments</h2>
+
+    <section class="roster-manager-view" data-view="list">
+      <p class="format-modal-help">
+        Create your own tournament roster sets — they show up in the <em>Rosters from</em> dropdown
+        next to the built-in tournaments. Rosters are saved in this browser; use
+        <strong>Export</strong> / <strong>Import</strong> to move them between machines.
+      </p>
+      <ul class="roster-manager-list" id="roster-manager-list"></ul>
+      <div class="format-modal-actions">
+        <button type="button" class="btn btn-start" data-action="new-custom-tournament">New tournament</button>
+        <button type="button" class="btn" data-action="import-roster-file">Import .txt file</button>
+        <span class="format-modal-status" id="roster-list-status"></span>
+      </div>
+    </section>
+
+    <section class="roster-manager-view" data-view="editor">
+      <p class="format-modal-help">
+        First line: <em>Tournament: &lt;name&gt;</em>. Then one block per team, separated by blank
+        lines — team name first, one player per line.
+      </p>
+      <textarea id="roster-editor-text" class="format-modal-textarea" rows="14" spellcheck="false"
+                placeholder="Tournament: My Invitational 2027&#10;&#10;Team Alpha&#10;Alice Aaronson&#10;Bob Brown&#10;&#10;Team Beta&#10;Carol Chen&#10;Dan Diaz"></textarea>
+      <div class="format-modal-actions">
+        <button type="button" class="btn btn-start" data-action="save-custom-tournament">Save</button>
+        <button type="button" class="btn" data-action="cancel-roster-editor">Cancel</button>
+        <button type="button" class="btn" data-action="load-roster-file">Load from file</button>
+        <span class="format-modal-status" id="roster-editor-status"></span>
+      </div>
+    </section>
+
+    <input type="file" id="roster-file-input" accept=".txt" hidden>
   </div>
 </div>
 

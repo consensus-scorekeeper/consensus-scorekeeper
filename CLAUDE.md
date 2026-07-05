@@ -70,6 +70,11 @@ src/
     roster-presets.js   ← TOURNAMENTS registry (slug + rosters + description; no statsPage —
                           link is derived from slug). + DEFAULT_TOURNAMENT
                           + PLAYER_SUGGESTIONS + getTournamentBySlug
+    custom-tournaments.js ← user-created tournaments (localStorage) merged with
+                          TOURNAMENTS: getAllTournaments, getAnyTournamentBySlug,
+                          generateSlug
+    roster-manager.js   ← "My tournaments" modal: create/edit/delete/export/import
+                          custom roster sets (list + editor views)
     drag-reorder.js     ← attachDragReorder: HTML5 drag handler for roster lists / panels
     game.js             ← renderGame (single state subscriber), renderQuestion, etc.
     pdf-viewer.js       ← inline + fullscreen pdf.js viewer
@@ -89,6 +94,8 @@ src/
     csv.js              ← buildResultsCsv, buildResultsFilename (used by exportCsv)
     parse-results-csv.js ← parseResultsCsv: round-trip of buildResultsCsv output
     tournament-aggregate.js ← aggregateTournament + gamesForTeam + gamesForPlayer
+    roster-text.js      ← parseRosterText / serializeRosterText / slugifyName:
+                          the plain-text roster format (pure, DOM-free)
 assets/
   tutorial-pack.pdf     ← bundled pack the tutorial sandbox loads
   text-pack-llm-prompt.txt ← LLM reformatting prompt the Format-pack modal fills in
@@ -126,7 +133,8 @@ tests/                  ← vitest tests; run with `npm test`
   - `consensus-state-v1`             — saved scorekeeper game (game/persistence.js)
   - `consensus-stats-pdf-v1`         — saved PDF bytes (game/persistence.js). Cleared on `.docx` upload via `clearSavedPdfBytes()` so the inline viewer doesn't try to render a stale PDF from the previous pack.
   - `consensus-roster-mode-v1`       — 'custom' (default) or 'preset'; legacy 'tournament' is migrated to 'preset' on read (ui/setup.js)
-  - `consensus-tournament-slug-v1`   — which TOURNAMENTS entry drives the preset team-name dropdown (ui/setup.js)
+  - `consensus-tournament-slug-v1`   — which tournament (built-in or custom) drives the preset team-name dropdown (ui/setup.js)
+  - `consensus-custom-tournaments-v1` — user-created tournaments-with-rosters (ui/custom-tournaments.js)
 - **Multiple pages share modules**, so anything imported by `stats-main.js`
   or `tournaments-main.js` must not assume scorekeeper-only DOM exists.
   `tournament-stats.js`, the util modules, and `roster-presets.js` are
@@ -143,10 +151,11 @@ dropdown that appears alongside ON:
   `<input>`. Rosters are built manually. The tournament picker is hidden.
 - **Tournament rosters: ON** — team-name field is a `<select>` populated
   from the chosen tournament's `rosters`. The picker (`Rosters from
-  <select>`) lists every entry in `TOURNAMENTS`; changing it clears the
-  current teams and repopulates the dropdowns from the newly chosen
-  tournament. Adding a player offers an autocomplete `<datalist>` of
-  every name across every tournament.
+  <select>`) lists every entry in `TOURNAMENTS` plus every user-created
+  tournament (see below); changing it clears the current teams and
+  repopulates the dropdowns from the newly chosen tournament. Adding a
+  player offers an autocomplete `<datalist>` of the selected tournament's
+  players (it repopulates whenever the picker changes).
 
 The add-player `<datalist>` is also gated on mode: in `custom` mode
 `populatePlayerSuggestions()` empties it, so a manually-typed roster
@@ -164,6 +173,32 @@ sections can show/hide themselves without JS coordination.
 `setTeamNameField(team, name)` is the mode-aware setter that
 `loadState`, `tutorial.js`, and the toggle itself use to display a name
 in whichever element is currently mounted.
+
+### Custom tournaments (roster manager)
+
+A **Manage** button next to the tournament picker (visible only in preset
+mode) opens the "My tournaments" modal (`ui/roster-manager.js`): create,
+edit, delete, export, and import user-defined tournament roster sets.
+They're stored in `consensus-custom-tournaments-v1`
+(`ui/custom-tournaments.js`) and merged into the picker under a
+"My tournaments" `<optgroup>` by `getAllTournaments()`. Key facts:
+
+- The editor is one textarea holding the plain-text roster format
+  (`util/roster-text.js`): first line `Tournament: <name>`, then
+  blank-line-separated team blocks (team name, then one player per
+  line). Export writes the same format to `<slug>.rosters.txt`, so
+  export → import round-trips.
+- Slugs are auto-generated (`generateSlug`: kebab-case + `-2`/`-3` on
+  collision vs built-ins and customs) and stay stable across renames —
+  the slug is the identity behind `consensus-tournament-slug-v1`.
+- After any create/edit/delete the manager calls setup.js's
+  `refreshTournamentPicker({ mutatedSlug })`, which rebuilds the picker,
+  re-applies the selected tournament if it was the one edited, and falls
+  back to `DEFAULT_TOURNAMENT` (clearing teams only in preset mode) if
+  the selected one was deleted.
+- Custom tournaments never appear on the public stats hub or stats
+  pages — `tournaments-main.js` / `stats-main.js` import the built-in
+  registry directly, and custom entries have no `results/` folder.
 
 ## Packet upload — `.pdf` vs `.zip` vs `.docx` vs `.txt`
 
@@ -335,6 +370,11 @@ transparent to tests. Notable test files:
                                      stays in sync with its folder
 - `text-pack.test.js`              — .txt pack parsing; the full-pack cases read the
                                      `assets/sample_txt_pack.txt` fixture
+- `roster-text.test.js`            — plain-text roster format: parse/serialize round-trip,
+                                     error rules, slugifyName
+- `custom-tournaments.test.js`     — localStorage CRUD, slug collisions, merged registry
+- `roster-manager.test.js`         — picker merge + delete/edit fallbacks + modal flows
+                                     through the real data-action dispatcher
 
 If you add stats functionality, add fixtures + assertions there so the
 manifest can't silently drift.

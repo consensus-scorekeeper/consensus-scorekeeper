@@ -63,6 +63,7 @@ import { pushScoreboardUpdate, popOutScoreboard } from './ui/scoreboard-popout.j
 import { setupPackBrowser } from './ui/pack-browser.js';
 import { startTutorialGame } from './ui/tutorial.js';
 import { setupFormatPack, formatPackActions } from './ui/format-pack.js';
+import { setupRosterManager, rosterManagerActions } from './ui/roster-manager.js';
 
 // ==================== UI INIT ====================
 setupSetupScreen();
@@ -73,6 +74,7 @@ setupSplitters();
 setupPdfViewer();
 setupPackBrowser();
 setupFormatPack();
+setupRosterManager();
 
 // File picker on the setup screen — uploads a PDF, a zip-of-PDFs, a .docx,
 // or a .txt pack. The non-PDF formats are text-only (no inline PDF viewer).
@@ -203,6 +205,7 @@ const ACTION_HANDLERS = {
   'reparse-current-pdf': () => reparseCurrentPdf(),
   'back-to-setup': () => backToSetup(),
   ...formatPackActions,
+  ...rosterManagerActions,
 };
 
 document.addEventListener('click', (e) => {

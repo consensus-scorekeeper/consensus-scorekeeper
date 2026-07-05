@@ -28,12 +28,11 @@
 import { state } from '../state.js';
 import { escapeHtml } from '../util/escape.js';
 import { saveState } from '../game/persistence.js';
+import { DEFAULT_TOURNAMENT } from './roster-presets.js';
 import {
-  TOURNAMENTS,
-  DEFAULT_TOURNAMENT,
-  PLAYER_SUGGESTIONS,
-  getTournamentBySlug,
-} from './roster-presets.js';
+  getAllTournaments,
+  getAnyTournamentBySlug,
+} from './custom-tournaments.js';
 import { attachDragReorder } from './drag-reorder.js';
 
 const ROSTER_MODE_KEY = 'consensus-roster-mode-v1';
@@ -56,13 +55,13 @@ function readPersistedMode() {
 function readPersistedTournamentSlug() {
   try {
     const v = localStorage.getItem(TOURNAMENT_SLUG_KEY);
-    if (v && getTournamentBySlug(v)) return v;
+    if (v && getAnyTournamentBySlug(v)) return v;
   } catch { /* ignore */ }
   return DEFAULT_TOURNAMENT.slug;
 }
 
 function currentTournament() {
-  return getTournamentBySlug(selectedTournamentSlug) || DEFAULT_TOURNAMENT;
+  return getAnyTournamentBySlug(selectedTournamentSlug) || DEFAULT_TOURNAMENT;
 }
 
 export function getRosterMode() { return rosterMode; }
@@ -116,14 +115,17 @@ function buildTeamInputMarkup(team, currentName) {
 function populatePlayerSuggestions() {
   const dl = document.getElementById('player-suggestions');
   if (!dl) return;
-  // Suggestions are the cross-tournament player list. In custom mode the
-  // user isn't drafting from a preset roster, so suggesting names from
-  // tournaments they aren't using is noise — empty the datalist instead.
+  // Suggestions are the selected tournament's player list — names from
+  // other tournaments would be noise (the moderator is running THIS one).
+  // In custom mode the user isn't drafting from a preset roster at all,
+  // so the datalist is emptied instead.
   if (rosterMode !== 'preset') {
     dl.innerHTML = '';
     return;
   }
-  dl.innerHTML = PLAYER_SUGGESTIONS
+  const names = currentTournament().rosters.flatMap((r) => r.players);
+  dl.innerHTML = [...new Set(names)]
+    .sort((a, b) => a.localeCompare(b))
     .map((name) => `<option value="${escapeHtml(name)}"></option>`)
     .join('');
 }
@@ -229,19 +231,27 @@ function syncToggleLabel() {
   syncTournamentPicker();
 }
 
-// Populate (once) and toggle visibility of the tournament-picker dropdown
-// shown when preset mode is active. The <select> is filled from TOURNAMENTS
-// the first time we see the element; subsequent calls only refresh its
-// `value` and the hidden state.
+// Populate and toggle visibility of the tournament-picker dropdown shown
+// when preset mode is active. Rebuilt unconditionally on every call: the
+// list is tiny, the change listener lives on the <select> itself (so it
+// survives innerHTML), and custom tournaments can appear/rename/vanish at
+// runtime via the roster manager. Custom entries render in their own
+// optgroup so it's obvious which rosters are user-created.
 function syncTournamentPicker() {
   const picker = document.getElementById('roster-tournament-picker');
   const sel = document.getElementById('roster-tournament-select');
   if (!picker || !sel) return;
-  if (sel.options.length !== TOURNAMENTS.length) {
-    sel.innerHTML = TOURNAMENTS.map((t) =>
-      `<option value="${escapeHtml(t.slug)}">${escapeHtml(t.name)}</option>`
-    ).join('');
+  const optionMarkup = (t) =>
+    `<option value="${escapeHtml(t.slug)}">${escapeHtml(t.name)}</option>`;
+  const all = getAllTournaments();
+  const builtIn = all.filter((t) => !t.custom);
+  const custom = all.filter((t) => t.custom);
+  let html = builtIn.map(optionMarkup).join('');
+  if (custom.length) {
+    html = `<optgroup label="Built-in">${html}</optgroup>` +
+      `<optgroup label="My tournaments">${custom.map(optionMarkup).join('')}</optgroup>`;
   }
+  sel.innerHTML = html;
   sel.value = selectedTournamentSlug;
   picker.hidden = rosterMode !== 'preset';
 }
@@ -265,7 +275,7 @@ export function toggleRosterMode() {
 // names that aren't part of the new roster set (they wouldn't match any
 // option and would clutter the dropdown as a dynamic entry).
 function applySelectedTournament(slug) {
-  if (!getTournamentBySlug(slug)) return;
+  if (!getAnyTournamentBySlug(slug)) return;
   selectedTournamentSlug = slug;
   try { localStorage.setItem(TOURNAMENT_SLUG_KEY, slug); } catch {}
   // Clearing the team is the safest move — keeping a stale team name
@@ -280,7 +290,32 @@ function applySelectedTournament(slug) {
   }
   renderTeamNameField('a');
   renderTeamNameField('b');
+  populatePlayerSuggestions();
   saveState();
+}
+
+// Called by the roster manager after a custom tournament is created,
+// edited, or deleted, so the picker + autocomplete reflect the change.
+//   - If the selected tournament vanished (deleted): fall back to the
+//     default. In preset mode that goes through applySelectedTournament
+//     (clears teams, same semantics as a manual switch); in custom mode we
+//     only update the persisted slug — never clobber a hand-built roster
+//     over background bookkeeping.
+//   - If the currently selected tournament was edited (mutatedSlug): re-apply
+//     it in preset mode so the team dropdowns repopulate from the new rosters.
+export function refreshTournamentPicker({ mutatedSlug } = {}) {
+  if (!getAnyTournamentBySlug(selectedTournamentSlug)) {
+    if (rosterMode === 'preset') {
+      applySelectedTournament(DEFAULT_TOURNAMENT.slug);
+    } else {
+      selectedTournamentSlug = DEFAULT_TOURNAMENT.slug;
+      try { localStorage.setItem(TOURNAMENT_SLUG_KEY, selectedTournamentSlug); } catch {}
+    }
+  } else if (mutatedSlug && mutatedSlug === selectedTournamentSlug && rosterMode === 'preset') {
+    applySelectedTournament(selectedTournamentSlug);
+  }
+  syncTournamentPicker();
+  populatePlayerSuggestions();
 }
 
 export function setupSetupScreen() {
