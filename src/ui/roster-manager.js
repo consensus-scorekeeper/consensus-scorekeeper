@@ -17,17 +17,13 @@ import {
   deleteCustomTournament,
 } from './custom-tournaments.js';
 import { refreshTournamentPicker } from './setup.js';
+import { setStatus, wireModalDismiss } from './modal.js';
+import { downloadTextFile } from './download.js';
 
 let editingSlug = null;       // null = creating a new tournament
 let fileTarget = 'import';    // where the next picked file goes: 'import' | 'editor'
 
 const $ = (id) => document.getElementById(id);
-
-function setStatus(el, message, kind) {
-  if (!el) return;
-  el.textContent = message;
-  el.className = 'format-modal-status' + (kind ? ` ${kind}` : '');
-}
 
 function showView(view) {
   const card = $('roster-manager-card');
@@ -48,9 +44,9 @@ function renderList() {
       `<span class="roster-manager-name">${escapeHtml(t.name)}</span>` +
       `<span class="roster-manager-meta">${t.rosters.length} teams · ${players} players</span>` +
       `<span class="roster-manager-row-actions">` +
-        `<button type="button" class="btn" data-roster-action="edit">Edit</button>` +
-        `<button type="button" class="btn" data-roster-action="export">Export</button>` +
-        `<button type="button" class="btn" data-roster-action="delete" title="Delete this tournament">Delete</button>` +
+        `<button type="button" class="btn btn-add" data-roster-action="edit">Edit</button>` +
+        `<button type="button" class="btn btn-add" data-roster-action="export">Export</button>` +
+        `<button type="button" class="btn btn-add" data-roster-action="delete" title="Delete this tournament">Delete</button>` +
       `</span>` +
     `</li>`;
   }).join('');
@@ -68,18 +64,24 @@ function openEditor(slug) {
   setTimeout(() => textarea && textarea.focus(), 0);
 }
 
+// Parse + validate the editor text. Returns { parsed } on success or
+// { error } — the single source of truth for what the editor accepts,
+// shared by the live preview and the save button.
+function validateEditor(text) {
+  const parsed = parseRosterText(text);
+  if (!parsed.ok) return { error: parsed.errors.join(' ') };
+  if (!parsed.name) return { error: 'Add a first line "Tournament: <name>" to name this tournament.' };
+  return { parsed };
+}
+
 // Live validation line under the editor: parse errors, or a short summary.
 function updateEditorPreview() {
   const textarea = $('roster-editor-text');
   const status = $('roster-editor-status');
   if (!textarea || !status) return;
   if (!textarea.value.trim()) { setStatus(status, ''); return; }
-  const parsed = parseRosterText(textarea.value);
-  if (!parsed.ok) { setStatus(status, parsed.errors.join(' '), 'error'); return; }
-  if (!parsed.name) {
-    setStatus(status, 'Add a first line "Tournament: <name>" to name this tournament.', 'error');
-    return;
-  }
+  const { parsed, error } = validateEditor(textarea.value);
+  if (error) { setStatus(status, error, 'error'); return; }
   const players = parsed.rosters.reduce((sum, r) => sum + r.players.length, 0);
   setStatus(status, `${parsed.name} — ${parsed.rosters.length} teams, ${players} players`, 'success');
 }
@@ -87,12 +89,8 @@ function updateEditorPreview() {
 function saveFromEditor() {
   const textarea = $('roster-editor-text');
   const status = $('roster-editor-status');
-  const parsed = parseRosterText(textarea ? textarea.value : '');
-  if (!parsed.ok) { setStatus(status, parsed.errors.join(' '), 'error'); return; }
-  if (!parsed.name) {
-    setStatus(status, 'First line must be "Tournament: <name>".', 'error');
-    return;
-  }
+  const { parsed, error } = validateEditor(textarea ? textarea.value : '');
+  if (error) { setStatus(status, error, 'error'); return; }
   const saved = saveCustomTournament({
     name: parsed.name,
     slug: editingSlug || undefined,   // undefined → storage assigns a fresh slug
@@ -107,12 +105,7 @@ function saveFromEditor() {
 function exportTournament(slug) {
   const entry = loadCustomTournaments().find((t) => t.slug === slug);
   if (!entry) return;
-  const blob = new Blob([serializeRosterText(entry)], { type: 'text/plain;charset=utf-8;' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = `${entry.slug}.rosters.txt`;
-  link.click();
-  URL.revokeObjectURL(link.href);
+  downloadTextFile(`${entry.slug}.rosters.txt`, serializeRosterText(entry));
 }
 
 function removeTournament(slug) {
@@ -141,12 +134,18 @@ async function handlePickedFile(file) {
   // Headerless files fall back to the filename stem for the name.
   let name = parsed.name || file.name.replace(/\.rosters\.txt$|\.txt$/i, '').trim() || 'Imported tournament';
   let slug;   // undefined → new entry with a fresh slug
-  const existing = loadCustomTournaments().find((t) => t.name.toLowerCase() === name.toLowerCase());
+  const customs = loadCustomTournaments();
+  const taken = new Set(customs.map((t) => t.name.toLowerCase()));
+  const existing = customs.find((t) => t.name.toLowerCase() === name.toLowerCase());
   if (existing) {
     if (confirm(`Replace existing tournament "${existing.name}" with this file?`)) {
       slug = existing.slug;
     } else {
-      name = `${name} (2)`;
+      // Keep both: suffix like generateSlug does, until the name is free
+      // (repeated imports yield "(2)", "(3)", … instead of colliding).
+      for (let n = 2; ; n++) {
+        if (!taken.has(`${name} (${n})`.toLowerCase())) { name = `${name} (${n})`; break; }
+      }
     }
   }
   const saved = saveCustomTournament({ name, slug, rosters: parsed.rosters });
@@ -179,10 +178,7 @@ export function setupRosterManager() {
   const modal = $('roster-manager-modal');
   if (!modal) return;
 
-  modal.addEventListener('click', (e) => { if (e.target === modal) closeRosterManager(); });
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && modal.classList.contains('open')) closeRosterManager();
-  });
+  wireModalDismiss(modal, closeRosterManager);
 
   // Rows are re-rendered via innerHTML, so per-row buttons go through one
   // delegated listener on the list container (same convention as rosters).

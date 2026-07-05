@@ -14,6 +14,7 @@
 
 import { parseTextFile } from '../loader.js';
 import { state } from '../state.js';
+import { setStatus, wireModalDismiss } from './modal.js';
 
 const PROMPT_URL = 'assets/text-pack-llm-prompt.txt';
 const RAW_PLACEHOLDER = '{paste your raw questions here}';
@@ -26,12 +27,6 @@ async function getPromptTemplate() {
   if (!res.ok) throw new Error(`Could not load prompt template (${res.status})`);
   cachedPromptTemplate = await res.text();
   return cachedPromptTemplate;
-}
-
-function setStatus(el, message, kind) {
-  if (!el) return;
-  el.textContent = message;
-  el.className = 'format-modal-status' + (kind ? ' ' + kind : '');
 }
 
 export function openFormatPack() {
@@ -94,13 +89,7 @@ async function loadPack() {
 export function setupFormatPack() {
   const modal = document.getElementById('format-modal');
   if (!modal) return;
-  // Backdrop click closes; clicks inside the card don't bubble out.
-  modal.addEventListener('click', (e) => {
-    if (e.target === modal) closeFormatPack();
-  });
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && modal.classList.contains('open')) closeFormatPack();
-  });
+  wireModalDismiss(modal, closeFormatPack);
 }
 
 export const formatPackActions = {

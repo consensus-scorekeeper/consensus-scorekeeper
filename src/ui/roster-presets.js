@@ -45,8 +45,9 @@ export function getTournamentBySlug(slug) {
   return TOURNAMENTS.find((t) => t.slug === slug) || null;
 }
 
-// Autocomplete suggestions in the "Add player" input. Deduped across every
-// tournament so a player who appears on multiple rosters isn't listed twice.
-export const PLAYER_SUGGESTIONS = Array.from(new Set(
-  TOURNAMENTS.flatMap((t) => t.rosters.flatMap((r) => r.players))
-)).sort((a, b) => a.localeCompare(b));
+// Autocomplete pool for the "Add player" input: one tournament's players,
+// deduped (a player can appear on multiple rosters) and locale-sorted.
+export function playerSuggestionsFor(tournament) {
+  return [...new Set(tournament.rosters.flatMap((r) => r.players))]
+    .sort((a, b) => a.localeCompare(b));
+}

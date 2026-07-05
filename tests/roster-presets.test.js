@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { state } from '../src/main.js';
 import { setTeamNameField, toggleRosterMode, getRosterMode } from '../src/ui/setup.js';
-import { PLAYER_SUGGESTIONS, TOURNAMENTS, DEFAULT_TOURNAMENT } from '../src/ui/roster-presets.js';
+import { playerSuggestionsFor, TOURNAMENTS, DEFAULT_TOURNAMENT } from '../src/ui/roster-presets.js';
 import { resetState } from './helpers.js';
 
 // Toggle into a known mode before each test. setupSetupScreen ran at main.js
@@ -78,7 +78,7 @@ describe('team-name <select> presets', () => {
   it('Michał Gerasimiuk is on the Sarlacc roster and in the autocomplete list', () => {
     const sarlacc = DEFAULT_TOURNAMENT.rosters.find((p) => p.name === 'Sarlacc');
     expect(sarlacc.players).toContain('Michał Gerasimiuk');
-    expect(PLAYER_SUGGESTIONS).toContain('Michał Gerasimiuk');
+    expect(playerSuggestionsFor(DEFAULT_TOURNAMENT)).toContain('Michał Gerasimiuk');
     const dl = document.getElementById('player-suggestions');
     const values = Array.from(dl.querySelectorAll('option')).map((o) => o.value);
     expect(values).toContain('Michał Gerasimiuk');

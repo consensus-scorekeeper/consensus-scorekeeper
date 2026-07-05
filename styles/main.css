@@ -1162,15 +1162,14 @@ body {
 .tournaments-empty { color: #777; font-style: italic; padding: 12px 0; }
 
 /* ==================== ROSTER MANAGER MODAL ==================== */
+/* Composes .btn; overrides only the outlined look + compact size. */
 .roster-manage-btn {
   padding: 4px 10px;
   border: 1px solid #ccc;
   border-radius: 4px;
   background: #fff;
   font-size: 0.85rem;
-  font-weight: 600;
   color: #333;
-  cursor: pointer;
 }
 .roster-manage-btn:hover { background: #f1f5f9; }
 
@@ -1196,11 +1195,9 @@ body {
 .roster-manager-name { font-weight: 600; }
 .roster-manager-meta { color: #777; font-size: 0.85rem; flex: 1; }
 .roster-manager-row-actions { display: flex; gap: 6px; }
+/* Rows use .btn.btn-add for colors; only the compact size is local. */
 .roster-manager-row-actions .btn {
-  background: #e0e0e0;
-  color: #111;
   padding: 4px 10px;
   font-size: 0.85rem;
 }
-.roster-manager-row-actions .btn:hover { background: #ccc; }
 .roster-manager-empty { color: #777; font-style: italic; padding: 10px 4px; }

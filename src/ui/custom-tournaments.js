@@ -4,8 +4,10 @@
 // and per-tournament stats pages import the built-in registry directly and
 // never show custom entries (they have no results/ folder to publish).
 //
-// Stored shape mirrors a registry entry plus a `custom: true` flag:
-//   [{ name, slug, custom: true, rosters: [{ name, players: [string] }] }]
+// Stored shape mirrors a registry entry:
+//   [{ name, slug, rosters: [{ name, players: [string] }] }]
+// A `custom: true` flag is stamped on load (never persisted) so consumers
+// of the merged list can tell user-created entries from built-ins.
 //
 // Like game/persistence.js this touches localStorage but never `document`,
 // so stats-main.js could import it safely if ever needed.
@@ -25,27 +27,42 @@ function isValidEntry(t) {
       && r.players.every((p) => typeof p === 'string' && p));
 }
 
+// Parsing is memoized on the raw stored string: lookups happen on every
+// picker refresh / team pick, and re-reading getItem is cheap while
+// re-parsing + re-cloning is the part worth skipping. Keying on the raw
+// string (instead of an invalidate-on-write flag) keeps the cache correct
+// even if something else writes the key directly.
+let cachedRaw = null;
+let cachedList = [];
+
 export function loadCustomTournaments() {
   try {
     const raw = localStorage.getItem(CUSTOM_TOURNAMENTS_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter(isValidEntry).map((t) => ({ ...t, custom: true }));
+    if (raw !== cachedRaw) {
+      const parsed = raw ? JSON.parse(raw) : [];
+      cachedList = Array.isArray(parsed)
+        ? parsed.filter(isValidEntry).map((t) => ({ ...t, custom: true }))
+        : [];
+      cachedRaw = raw;
+    }
+    return cachedList;
   } catch {
     return [];
   }
 }
 
 function persist(list) {
+  // Strip the runtime-only `custom` flag (and any other stray props) so
+  // storage holds exactly the documented { name, slug, rosters } shape.
+  const bare = list.map(({ name, slug, rosters }) => ({ name, slug, rosters }));
   try {
-    localStorage.setItem(CUSTOM_TOURNAMENTS_KEY, JSON.stringify(list));
+    localStorage.setItem(CUSTOM_TOURNAMENTS_KEY, JSON.stringify(bare));
   } catch { /* storage full/blocked — keep the session working in memory-less mode */ }
 }
 
 // Upsert by slug; assigns a fresh collision-free slug when absent.
 export function saveCustomTournament(tournament) {
-  const list = loadCustomTournaments();
+  const list = [...loadCustomTournaments()];
   const entry = { ...tournament, custom: true };
   if (!entry.slug) entry.slug = generateSlug(entry.name);
   const idx = list.findIndex((t) => t.slug === entry.slug);

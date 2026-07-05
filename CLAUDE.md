@@ -69,12 +69,15 @@ src/
     setup.js            ← roster CRUD + Tournament-rosters on/off toggle + tournament picker
     roster-presets.js   ← TOURNAMENTS registry (slug + rosters + description; no statsPage —
                           link is derived from slug). + DEFAULT_TOURNAMENT
-                          + PLAYER_SUGGESTIONS + getTournamentBySlug
+                          + playerSuggestionsFor + getTournamentBySlug
     custom-tournaments.js ← user-created tournaments (localStorage) merged with
                           TOURNAMENTS: getAllTournaments, getAnyTournamentBySlug,
                           generateSlug
     roster-manager.js   ← "My tournaments" modal: create/edit/delete/export/import
                           custom roster sets (list + editor views)
+    modal.js            ← shared modal plumbing: setStatus + wireModalDismiss
+                          (used by format-pack.js and roster-manager.js)
+    download.js         ← downloadTextFile: Blob + anchor-click browser download
     drag-reorder.js     ← attachDragReorder: HTML5 drag handler for roster lists / panels
     game.js             ← renderGame (single state subscriber), renderQuestion, etc.
     pdf-viewer.js       ← inline + fullscreen pdf.js viewer

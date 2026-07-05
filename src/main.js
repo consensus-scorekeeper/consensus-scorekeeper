@@ -47,6 +47,7 @@ import { applyCustomAward, setupDevTools, reparseCurrentPdf as reparsePdfImpl } 
 import { setupKeybinds } from './ui/keybinds.js';
 import { escapeHtml, csvEscape } from './util/escape.js';
 import { buildResultsCsv, buildResultsFilename } from './util/csv.js';
+import { downloadTextFile } from './ui/download.js';
 import { setupSplitters } from './ui/splitter.js';
 import {
   viewPdf,
@@ -103,20 +104,11 @@ function clearAndReload() {
   location.reload();
 }
 
-// Trigger a CSV download. The CSV builder is pure (util/csv.js); this thin
-// wrapper handles the Blob + anchor click that the browser needs to actually
-// download the file.
+// Trigger a CSV download. The CSV builder is pure (util/csv.js); the BOM
+// prefix keeps Excel happy with UTF-8 content.
 function exportCsv() {
   const csv = buildResultsCsv(state);
-  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = buildResultsFilename(state);
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  downloadTextFile(buildResultsFilename(state), '﻿' + csv, 'text/csv;charset=utf-8;');
 }
 
 // loadState restores the last session from localStorage. Lives here because

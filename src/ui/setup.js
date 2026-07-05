@@ -28,9 +28,9 @@
 import { state } from '../state.js';
 import { escapeHtml } from '../util/escape.js';
 import { saveState } from '../game/persistence.js';
-import { DEFAULT_TOURNAMENT } from './roster-presets.js';
+import { TOURNAMENTS, DEFAULT_TOURNAMENT, playerSuggestionsFor } from './roster-presets.js';
 import {
-  getAllTournaments,
+  loadCustomTournaments,
   getAnyTournamentBySlug,
 } from './custom-tournaments.js';
 import { attachDragReorder } from './drag-reorder.js';
@@ -123,9 +123,7 @@ function populatePlayerSuggestions() {
     dl.innerHTML = '';
     return;
   }
-  const names = currentTournament().rosters.flatMap((r) => r.players);
-  dl.innerHTML = [...new Set(names)]
-    .sort((a, b) => a.localeCompare(b))
+  dl.innerHTML = playerSuggestionsFor(currentTournament())
     .map((name) => `<option value="${escapeHtml(name)}"></option>`)
     .join('');
 }
@@ -243,10 +241,8 @@ function syncTournamentPicker() {
   if (!picker || !sel) return;
   const optionMarkup = (t) =>
     `<option value="${escapeHtml(t.slug)}">${escapeHtml(t.name)}</option>`;
-  const all = getAllTournaments();
-  const builtIn = all.filter((t) => !t.custom);
-  const custom = all.filter((t) => t.custom);
-  let html = builtIn.map(optionMarkup).join('');
+  const custom = loadCustomTournaments();
+  let html = TOURNAMENTS.map(optionMarkup).join('');
   if (custom.length) {
     html = `<optgroup label="Built-in">${html}</optgroup>` +
       `<optgroup label="My tournaments">${custom.map(optionMarkup).join('')}</optgroup>`;
@@ -274,10 +270,14 @@ export function toggleRosterMode() {
 // team-name <select>s with the new tournament's rosters; clear any team
 // names that aren't part of the new roster set (they wouldn't match any
 // option and would clutter the dropdown as a dynamic entry).
-function applySelectedTournament(slug) {
-  if (!getAnyTournamentBySlug(slug)) return;
+function setSelectedTournamentSlug(slug) {
   selectedTournamentSlug = slug;
   try { localStorage.setItem(TOURNAMENT_SLUG_KEY, slug); } catch {}
+}
+
+function applySelectedTournament(slug) {
+  if (!getAnyTournamentBySlug(slug)) return;
+  setSelectedTournamentSlug(slug);
   // Clearing the team is the safest move — keeping a stale team name
   // would mismatch the new tournament's roster, and the moderator can
   // pick again from the freshly-populated dropdown.
@@ -308,14 +308,12 @@ export function refreshTournamentPicker({ mutatedSlug } = {}) {
     if (rosterMode === 'preset') {
       applySelectedTournament(DEFAULT_TOURNAMENT.slug);
     } else {
-      selectedTournamentSlug = DEFAULT_TOURNAMENT.slug;
-      try { localStorage.setItem(TOURNAMENT_SLUG_KEY, selectedTournamentSlug); } catch {}
+      setSelectedTournamentSlug(DEFAULT_TOURNAMENT.slug);
     }
   } else if (mutatedSlug && mutatedSlug === selectedTournamentSlug && rosterMode === 'preset') {
     applySelectedTournament(selectedTournamentSlug);
   }
   syncTournamentPicker();
-  populatePlayerSuggestions();
 }
 
 export function setupSetupScreen() {
