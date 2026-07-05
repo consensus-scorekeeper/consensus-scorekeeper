@@ -59,12 +59,26 @@ jobs:
           fi
           git commit -m "Add submitted results from #$ISSUE"
           git push -f origin "$BRANCH"
-          PR_URL=$(gh pr list --head "$BRANCH" --state open --json url --jq '.[0].url')
+          PR_URL=$(gh pr list --head "$BRANCH" --state open --json url --jq '.[].url' | head -n 1)
           if [ -z "$PR_URL" ]; then
             printf 'Results submitted via #%s.\n\nCloses #%s\n' "$ISSUE" "$ISSUE" > "$RUNNER_TEMP/pr-body.md"
-            PR_URL=$(gh pr create --head "$BRANCH" \
-              --title "Results submission (#$ISSUE)" \
-              --body-file "$RUNNER_TEMP/pr-body.md")
+            # On failure, surface gh's actual error in the issue comment —
+            # PR creation is the step most often blocked by org/repo
+            # Actions settings, and the submitter can't read run logs.
+            if ! PR_URL=$(gh pr create --head "$BRANCH" \
+                --title "Results submission (#$ISSUE)" \
+                --body-file "$RUNNER_TEMP/pr-body.md" 2> "$RUNNER_TEMP/gh-error.txt"); then
+              {
+                echo 'pr_note<<PR_NOTE_EOF'
+                echo "⚠️ The games validated and branch \`$BRANCH\` was pushed, but opening the PR failed:"
+                echo '```'
+                cat "$RUNNER_TEMP/gh-error.txt"
+                echo '```'
+                echo 'A maintainer can open the PR from that branch manually, or fix the setting and re-run the failed job.'
+                echo 'PR_NOTE_EOF'
+              } >> "$GITHUB_OUTPUT"
+              exit 1
+            fi
           fi
           echo "pr_note=Opened/updated PR for review: $PR_URL" >> "$GITHUB_OUTPUT"
 
