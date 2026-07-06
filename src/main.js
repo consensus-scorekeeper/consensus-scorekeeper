@@ -31,7 +31,6 @@ import { addPlayer, removePlayer, renderRoster, setupSetupScreen, setTeamNameFie
 import { openSubmitResults } from './ui/submit-results.js';
 import { parsePdf, parseDocx, parseTextFile, processZipBuffer, handleZipUpload } from './loader.js';
 import { readZip, looksLikePdfOrZip } from './parser/zip.js';
-import { extractRichLinesFromPdf } from './parser/pdf-text.js';
 import { cleanTrailing, extractRichRange, richToHtml, parseQuestions } from './parser/questions.js';
 import {
   padQuestionsToSlots,

@@ -7,7 +7,7 @@
 import { state } from './state.js';
 import { escapeHtml } from './util/escape.js';
 import { readZip } from './parser/zip.js';
-import { extractRichLinesFromPdf } from './parser/pdf-text.js';
+import { extractRichDocFromPdf } from './parser/pdf-text.js';
 import { parseQuestions } from './parser/questions.js';
 import { parseDocxBuffer } from './parser/docx-questions.js';
 import { parseTextPack } from './parser/text-pack.js';
@@ -29,9 +29,8 @@ export async function parsePdf(arrayBuffer, filename) {
     state.pdfBytes = new Uint8Array(arrayBuffer.slice(0));
     const pdf = await window.pdfjsLib.getDocument({ data: dataCopy }).promise;
 
-    const { lines, combined, richSegments, posMap, lineStartPositions } =
-      await extractRichLinesFromPdf(pdf);
-    const questions = parseQuestions(lines, combined, richSegments, posMap, lineStartPositions);
+    const { doc } = await extractRichDocFromPdf(pdf);
+    const questions = parseQuestions(doc);
     // pageNum and yPos are set inside parseQuestions (using exact question
     // positions, not indexOf which collides with substrings like "1. " inside "11. ").
     const totalSlots = questions.reduce((sum, q) => {

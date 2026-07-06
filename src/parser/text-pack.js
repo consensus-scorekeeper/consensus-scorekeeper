@@ -16,6 +16,7 @@
 // (parseQuestions handles propagation + streakRange).
 
 import { parseQuestions } from './questions.js';
+import { makeLine } from './rich-doc.js';
 
 export function parseTextPack(text) {
   const rawLines = text.split(/\r?\n/);
@@ -62,30 +63,9 @@ export function parseTextPack(text) {
     state = isCategory ? 'category' : 'instruction';
   }
 
-  // Build the rich-segment structure parseQuestions expects. Mirrors the
-  // buildInputs helper used in tests/parse-questions.test.js.
-  const lines = specs.map(s => ({ text: s.text, isBold: s.isBold }));
-  const richSegments = [];
-  const lineStartPositions = [0];
-  let combined = '';
-
-  specs.forEach((s, i) => {
-    richSegments.push({ str: s.text, bold: s.isBold, page: 1, y: 700 - i * 10 });
-    combined += s.text;
-    if (i < specs.length - 1) {
-      richSegments.push({ str: ' ', bold: false, page: 1, y: 700 - i * 10 });
-      combined += ' ';
-      lineStartPositions.push(combined.length);
-    }
-  });
-
-  const posMap = [];
-  for (let si = 0; si < richSegments.length; si++) {
-    const seg = richSegments[si];
-    for (let ci = 0; ci < seg.str.length; ci++) {
-      posMap.push({ segIdx: si, charIdx: ci });
-    }
-  }
-
-  return parseQuestions(lines, combined, richSegments, posMap, lineStartPositions);
+  const doc = {
+    source: 'txt',
+    lines: specs.map(s => makeLine(s.text, { isBold: s.isBold })),
+  };
+  return parseQuestions(doc);
 }

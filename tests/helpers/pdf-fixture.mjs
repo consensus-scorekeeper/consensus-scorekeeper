@@ -6,16 +6,15 @@
 
 import { readFile } from 'node:fs/promises';
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
-import { extractRichLinesFromPdf } from '../../src/parser/pdf-text.js';
+import { extractRichDocFromPdf } from '../../src/parser/pdf-text.js';
 import { parseQuestions } from '../../src/parser/questions.js';
 
 export async function parsePdfFixture(filePath) {
   const buf = await readFile(filePath);
   const pdf = await getDocument({ data: new Uint8Array(buf), useSystemFonts: true, verbosity: 0 }).promise;
   try {
-    const { lines, combined, richSegments, posMap, lineStartPositions } =
-      await extractRichLinesFromPdf(pdf);
-    return parseQuestions(lines, combined, richSegments, posMap, lineStartPositions);
+    const { doc } = await extractRichDocFromPdf(pdf);
+    return parseQuestions(doc);
   } finally {
     await pdf.destroy();
   }

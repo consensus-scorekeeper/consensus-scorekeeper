@@ -1,39 +1,20 @@
 import { describe, it, expect } from 'vitest';
 import { parseQuestions } from '../src/main.js';
+import { makeLine } from '../src/parser/rich-doc.js';
 
-// Build a synthetic parseQuestions input from a list of {text, isBold} lines.
-// Mirrors the shape produced by parsePdf so the assertions exercise the same
-// parser code paths real PDFs hit. Each line becomes one rich segment, with
-// a ' ' separator segment between lines (matching parsePdf's '\n' handling).
-function buildInputs(spec) {
-  const lines = spec.map((s) => ({ text: s.text, isBold: !!s.isBold }));
-  const richSegments = [];
-  const lineStartPositions = [0];
-  let combined = '';
-
-  spec.forEach((s, i) => {
-    richSegments.push({ str: s.text, bold: !!s.isBold, page: s.page || 1, y: s.y || (700 - i * 20) });
-    combined += s.text;
-    if (i < spec.length - 1) {
-      richSegments.push({ str: ' ', bold: false, page: s.page || 1, y: s.y || (700 - i * 20) });
-      combined += ' ';
-      lineStartPositions.push(combined.length);
-    }
-  });
-
-  const posMap = [];
-  for (let si = 0; si < richSegments.length; si++) {
-    const seg = richSegments[si];
-    for (let ci = 0; ci < seg.str.length; ci++) {
-      posMap.push({ segIdx: si, charIdx: ci });
-    }
-  }
-
-  return { lines, combined, richSegments, posMap, lineStartPositions };
+// Build a synthetic RichDoc from a list of {text, isBold} lines, mirroring
+// what the pdf adapter produces so the assertions exercise the same parser
+// code paths real PDFs hit.
+function buildDoc(spec) {
+  return {
+    source: 'test',
+    lines: spec.map((s, i) =>
+      makeLine(s.text, { isBold: !!s.isBold, page: s.page || 1, y: s.y || (700 - i * 20) })),
+  };
 }
 
 describe('parseQuestions — basic Set of 4 category', () => {
-  const { lines, combined, richSegments, posMap, lineStartPositions } = buildInputs([
+  const doc = buildDoc([
     { text: 'Set of 4: Famous Authors', isBold: true },
     { text: '1. Who wrote Hamlet?' },
     { text: 'A: Shakespeare' },
@@ -44,7 +25,7 @@ describe('parseQuestions — basic Set of 4 category', () => {
     { text: '4. Who wrote Ulysses?' },
     { text: 'A: Joyce' },
   ]);
-  const qs = parseQuestions(lines, combined, richSegments, posMap, lineStartPositions);
+  const qs = parseQuestions(doc);
 
   it('finds 4 questions', () => expect(qs).toHaveLength(4));
   it('numbers them 1..4', () => expect(qs.map((q) => q.num)).toEqual([1, 2, 3, 4]));
@@ -68,7 +49,7 @@ describe('parseQuestions — basic Set of 4 category', () => {
 });
 
 describe('parseQuestions — streak round', () => {
-  const { lines, combined, richSegments, posMap, lineStartPositions } = buildInputs([
+  const doc = buildDoc([
     { text: 'Streak: US Capitals', isBold: true },
     { text: '85. Name as many US state capitals as possible.' },
     { text: 'A: Albany' },
@@ -78,7 +59,7 @@ describe('parseQuestions — streak round', () => {
     { text: '90. Different question.' },
     { text: 'A: Foo' },
   ]);
-  const qs = parseQuestions(lines, combined, richSegments, posMap, lineStartPositions);
+  const qs = parseQuestions(doc);
 
   it('finds the streak question', () => {
     const streak = qs.find((q) => q.num === 85);
@@ -93,7 +74,7 @@ describe('parseQuestions — streak round', () => {
 });
 
 describe('parseQuestions — splits', () => {
-  const { lines, combined, richSegments, posMap, lineStartPositions } = buildInputs([
+  const doc = buildDoc([
     { text: 'Splits:', isBold: false },
     { text: 'Gothic Literature', isBold: true },
     { text: '50. Who wrote Frankenstein?' },
@@ -106,7 +87,7 @@ describe('parseQuestions — splits', () => {
     { text: '53. K2 is in which range?' },
     { text: 'A: Karakoram' },
   ]);
-  const qs = parseQuestions(lines, combined, richSegments, posMap, lineStartPositions);
+  const qs = parseQuestions(doc);
 
   it('labels first sub-category as "Splits 1: ..."', () => {
     expect(qs[0].category).toBe('Splits 1: Gothic Literature');
@@ -119,13 +100,13 @@ describe('parseQuestions — splits', () => {
 });
 
 describe('parseQuestions — captures category instructions', () => {
-  const { lines, combined, richSegments, posMap, lineStartPositions } = buildInputs([
+  const doc = buildDoc([
     { text: 'Set of 3: Before and After', isBold: true },
     { text: 'Each answer is two phrases joined by a shared word.' },
     { text: '60. Q text' },
     { text: 'A: Answer text' },
   ]);
-  const qs = parseQuestions(lines, combined, richSegments, posMap, lineStartPositions);
+  const qs = parseQuestions(doc);
   it('attaches the prose between category title and Q1 as instructions', () => {
     expect(qs[0].categoryInstructions).toBe('Each answer is two phrases joined by a shared word.');
   });
@@ -135,26 +116,26 @@ describe('parseQuestions — rejects mid-sentence "N." matches', () => {
   // Critical regression: in the parser comment, "secant of 5 pi over 3." inside
   // a question must NOT be matched as Q3. The fix is the isLineStart() check
   // against lineStartPositions.
-  const { lines, combined, richSegments, posMap, lineStartPositions } = buildInputs([
+  const doc = buildDoc([
     { text: 'Set of 4: Math', isBold: true },
     { text: '1. What is the secant of 5 pi over 3.' },
     { text: 'A: 2' },
     { text: '2. What is sin of pi?' },
     { text: 'A: 0' },
   ]);
-  const qs = parseQuestions(lines, combined, richSegments, posMap, lineStartPositions);
+  const qs = parseQuestions(doc);
   it('does not produce a spurious Q3 from "over 3."', () => {
     expect(qs.map((q) => q.num)).toEqual([1, 2]);
   });
 });
 
 describe('parseQuestions — stores page + y from rich segment', () => {
-  const { lines, combined, richSegments, posMap, lineStartPositions } = buildInputs([
+  const doc = buildDoc([
     { text: 'Set of 1: P', isBold: true, page: 2, y: 500 },
     { text: '1. Q?', page: 2, y: 480 },
     { text: 'A: A', page: 2, y: 470 },
   ]);
-  const qs = parseQuestions(lines, combined, richSegments, posMap, lineStartPositions);
+  const qs = parseQuestions(doc);
   it('records pageNum and yPos', () => {
     expect(qs[0].pageNum).toBe(2);
     expect(qs[0].yPos).toBe(480);

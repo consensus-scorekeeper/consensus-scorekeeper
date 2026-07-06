@@ -1,9 +1,11 @@
-// Pure question-text parser. Given the rich-line structure built from a PDF
-// (see parser/pdf-text.js, called by loader.js's parsePdf), this extracts
-// the question + answer for each numbered "N." in the text, attaches
-// category metadata, and returns the questions sorted by number.
+// Pure question-text parser — the single parsing core every packet format
+// funnels through. Given a RichDoc (see parser/rich-doc.js; built by the
+// pdf/docx/txt adapters), this extracts the question + answer for each
+// numbered "N." in the text, attaches category metadata, and returns the
+// questions sorted by number.
 
 import { escapeHtml } from '../util/escape.js';
+import { flattenDoc } from './rich-doc.js';
 
 export const SECTION_WORDS = [
   'END OF FIRST QUARTER', 'END OF FIRST HALF', 'END OF THIRD QUARTER', 'END OF GAME',
@@ -63,7 +65,9 @@ export function richToHtml(segments) {
   }).join('');
 }
 
-export function parseQuestions(lines, combined, richSegments, posMap, lineStartPositions) {
+export function parseQuestions(doc) {
+  const lines = doc.lines;
+  const { combined, segments: richSegments, posMap, lineStartPositions } = flattenDoc(doc);
   // Step 1: Build category map using bold detection from PDF fonts
   // A bold line that isn't a question, structural marker, answer/prompt line,
   // or bare number is a category title.
