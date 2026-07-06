@@ -10,7 +10,7 @@ import path from 'node:path';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const html = readFileSync(path.join(here, '..', 'index.html'), 'utf-8');
-const m = html.match(/<body[^>]*>([\s\S]*?)<\/body>/);
+const m = typeof document === 'undefined' ? null : html.match(/<body[^>]*>([\s\S]*?)<\/body>/);
 if (m) {
   // Strip <script> tags before injecting — happy-dom would try to fetch external
   // src on innerHTML assignment, which we don't want in tests. The bootstrap
