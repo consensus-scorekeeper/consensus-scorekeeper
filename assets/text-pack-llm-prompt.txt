@@ -75,6 +75,8 @@ B. QUESTIONS
    - Every question is one line starting with its number, a period, and
      a single space: `N. question text`
    - Questions are numbered 1..100 (or as numbered in the source).
+   - Numbers must strictly increase. Do not skip numbers except to
+     encode a streak's slot span (rule D).
    - The question text continues on the same line. Do NOT break a
      question across multiple lines.
 

@@ -3,6 +3,7 @@ import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { parseTextPack } from '../src/parser/text-pack.js';
+import { analyzeQuestions } from '../src/parser/diagnostics.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -153,5 +154,83 @@ describe('parseTextPack — full sample_txt_pack.txt fixture', () => {
   it('splits sub-categories are labeled Splits 1 / Splits 2', () => {
     expect(qs.find(q => q.num === 26).category).toBe('Splits 1: Star Wars Lightsabers');
     expect(qs.find(q => q.num === 30).category).toBe('Splits 2: Literature');
+  });
+});
+
+// The canonical authored format must parse with ZERO issues — this is the
+// guarantee the "Format pack" flow rests on. If a parser change breaks this,
+// the format spec (assets/text-pack-llm-prompt.txt) and the parser have
+// drifted apart.
+describe('parseTextPack — sample fixture is issue-free', () => {
+  const text = readFileSync(join(__dirname, '..', 'assets', 'sample_txt_pack.txt'), 'utf8');
+  const { questions, issues } = parseTextPack(text);
+
+  it('reports no adapter or core issues', () => expect(issues).toEqual([]));
+  it('reports no whole-pack issues', () => expect(analyzeQuestions(questions, { source: 'txt' })).toEqual([]));
+});
+
+describe('parseTextPack — line-numbered format issues', () => {
+  it('flags a question left dangling with no A: line', () => {
+    const { issues } = parseTextPack(
+      `Set of 2: X
+1. Answered?
+A: yes
+2. Where is the answer?`
+    );
+    const issue = issues.find(i => i.code === 'txt-question-without-answer');
+    expect(issue.lineNo).toBe(4);
+    expect(issue.slot).toBe(2);
+  });
+
+  it('flags a category-looking line stranded after an unanswered question', () => {
+    // "Set of 1: Second" reads as a category, but a category can only start
+    // after an answer — positionally it becomes question text and Q1 would
+    // silently inherit Q2's answer via jackpot propagation.
+    const { issues } = parseTextPack(
+      `Set of 1: First
+1. Where is the answer?
+Set of 1: Second
+2. Fine question?
+A: fine`
+    );
+    const issue = issues.find(i => i.code === 'txt-suspected-category');
+    expect(issue.lineNo).toBe(3);
+    expect(issue.snippet).toBe('Set of 1: Second');
+  });
+
+  it('does not flag jackpot clue chains (answer after the last clue)', () => {
+    const { issues } = parseTextPack(
+      `Jackpot
+14. Clue 1.
+15. Clue 2.
+16. Clue 3.
+17. Clue 4.
+A: final`
+    );
+    expect(issues.filter(i => i.code === 'txt-question-without-answer')).toEqual([]);
+  });
+
+  it('flags an A: line before any question', () => {
+    const { issues } = parseTextPack(
+      `Set of 1: X
+A: orphaned
+1. Real question?
+A: real`
+    );
+    const issue = issues.find(i => i.code === 'txt-orphan-answer');
+    expect(issue.lineNo).toBe(2);
+  });
+
+  it('flags question numbers that go backwards', () => {
+    const { issues } = parseTextPack(
+      `Set of 2: X
+5. First?
+A: one
+3. Backwards?
+A: two`
+    );
+    const issue = issues.find(i => i.code === 'txt-number-regression');
+    expect(issue.lineNo).toBe(4);
+    expect(issue.slot).toBe(3);
   });
 });
