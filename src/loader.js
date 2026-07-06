@@ -87,6 +87,59 @@ export async function parsePdf(arrayBuffer, filename) {
   }
 }
 
+// Zip uploads: after the first pack loads, the remaining packs are parsed
+// in the background so the dropdown can show a per-pack issue summary. The
+// generation counter abandons an in-flight annotation loop when a new
+// upload supersedes it; the cache lets re-selecting an annotated pack skip
+// the re-parse.
+let zipGeneration = 0;
+let zipParseCache = new Map(); // name → { questions, issues, totalSlots } | null (parse failed)
+
+function zipOptionLabel(name, result) {
+  if (!result) return `${name} — parse failed`;
+  const { errors, warns } = summarizeIssues(result.issues);
+  const parts = [];
+  if (errors) parts.push(`${errors} error${errors === 1 ? '' : 's'}`);
+  if (warns) parts.push(`${warns} warning${warns === 1 ? '' : 's'}`);
+  return parts.length ? `${name} — ${parts.join(', ')}` : `${name} — OK`;
+}
+
+function updateZipOptionLabel(name, result) {
+  const dropdown = document.getElementById('zip-pack-dropdown');
+  if (!dropdown) return;
+  const opt = [...dropdown.options].find(o => o.value === name);
+  if (opt) opt.textContent = zipOptionLabel(name, result);
+}
+
+async function annotateZipPacks(names, generation) {
+  for (const name of names) {
+    if (generation !== zipGeneration) return; // a newer upload took over
+    if (zipParseCache.has(name)) continue;
+    let result = null;
+    try {
+      result = await parsePdfToResult(state.zipPacks.get(name));
+    } catch {
+      result = null;
+    }
+    if (generation !== zipGeneration) return;
+    zipParseCache.set(name, result);
+    updateZipOptionLabel(name, result);
+    // Yield between packs so the UI stays responsive.
+    await new Promise(r => setTimeout(r, 0));
+  }
+}
+
+// Selecting an already-annotated pack reuses its cached parse; only the
+// state/status/persistence side has to rerun.
+function applyCachedZipResult(filename, data, result) {
+  setStatus('Loading cached parse...');
+  state.packName = filename;
+  state.parseIssues = [];
+  if (state.pdfViewer) state.pdfViewer.doc = null;
+  state.pdfBytes = new Uint8Array(data); // copy — the viewer may detach it
+  applyParseResult({ filename, ...result, isPdf: true });
+}
+
 export async function processZipBuffer(buffer) {
   setStatus('Reading zip file...');
   try {
@@ -96,6 +149,9 @@ export async function processZipBuffer(buffer) {
       setStatus('No PDF files found in zip.', 'error');
       return;
     }
+    zipGeneration++;
+    zipParseCache = new Map();
+    const generation = zipGeneration;
     state.zipPacks = new Map();
     for (const entry of pdfEntries) {
       state.zipPacks.set(entry.name, entry.data);
@@ -108,11 +164,17 @@ export async function processZipBuffer(buffer) {
       dropdown.onchange = async () => {
         const selected = dropdown.value;
         const data = state.zipPacks.get(selected);
-        if (data) await parsePdf(data, selected);
+        if (!data) return;
+        const cached = zipParseCache.get(selected);
+        if (cached) applyCachedZipResult(selected, data, cached);
+        else await parsePdf(data, selected);
       };
     }
     if (selectDiv) selectDiv.style.display = 'block';
     await parsePdf(state.zipPacks.get(names[0]), names[0]);
+    // Fire-and-forget: annotate every pack (including the first, so its
+    // label gets a verdict too) without blocking the upload flow.
+    annotateZipPacks(names, generation);
   } catch (err) {
     setStatus('Error reading zip: ' + err.message, 'error');
   }
