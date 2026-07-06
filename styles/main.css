@@ -112,6 +112,16 @@ body {
 .stats-back-link:hover { text-decoration: underline; }
 .stats-link { display: inline-block; text-decoration: none; }
 
+/* --- Setup-screen footer (GitHub / issues links) --- */
+.site-footer {
+  text-align: center;
+  margin-top: 28px;
+  font-size: 0.85rem;
+  color: #888;
+}
+.site-footer a { color: #2563eb; text-decoration: none; }
+.site-footer a:hover { text-decoration: underline; }
+
 /* --- Tournament stats panel --- */
 .ts-intro { color: #555; font-size: 0.9rem; margin-bottom: 12px; }
 .ts-status { font-size: 0.9rem; color: #555; }

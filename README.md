@@ -14,11 +14,11 @@ The repo has four entry points.
 
 ![Pop-out scoreboard window: dark background with both team names and large scores side-by-side, the current question number underneath, and the category line below that.](docs/screenshots/scorekeeper-popout.png)
 
-`tournaments/` is a hub page that lists every tournament hosted on the site, with a search box if the list grows.
+`tournaments/` is a hub page that lists every tournament hosted on the site, with a search box if the list grows. It also links to a "Create its stats page" form for anyone running their own tournament — submitting game CSVs under a fresh slug creates the tournament's page automatically, no code change needed.
 
 ![Tournament hub page with a search box at the top and one tournament card for Stanford Consensus 2026 below it.](docs/screenshots/stats-hub.png)
 
-`tournaments/<slug>/` is one tournament's stats page. It reads the CSV exports from `results/manifest.json` in the same folder and shows standings, an individual leaderboard, per-team and per-player drill-downs, and a per-game breakdown.
+`tournaments/<slug>/` is one tournament's stats page. It reads the CSV exports from `results/manifest.json` in the same folder and shows standings, an individual leaderboard, per-team and per-player drill-downs, and a per-game breakdown. Each stats page also has a "Submit game results" link — a GitHub form where anyone can paste or attach exported CSVs to publish games to that page (see "Running a tournament" below).
 
 ![Stanford Consensus 2026 stats page. A summary card on top, the team standings table below it, and the individual leaderboard below that.](docs/screenshots/stats-standings.png)
 
@@ -32,19 +32,19 @@ The repo has four entry points.
 python serve.py
 ```
 
-That starts a dev server on port 8000. The scorekeeper is at /, the hub at /tournaments/. The server also proxies `/proxy/` requests to consensustrivia.com, which is what lets the in-app pack browser work without CORS issues.
+That starts a dev server on port 8000. The scorekeeper is at /, the hub at /tournaments/. The server also proxies `/proxy/` requests to consensustrivia.com, which is what lets the in-app pack browser work without CORS issues. On the live (GitHub Pages) site the same job is done by a small Cloudflare Worker (`workers/pack-proxy/`); if every relay is unavailable the pack browser falls back to a plain download-it-yourself link.
 
 ## Running a tournament
 
 The intended workflow during a multi-room tournament:
 
 1. Each room scores its game in `index.html` and clicks Export CSV at the end.
-2. The CSVs get dropped into `tournaments/<slug>/results/`.
-3. After pushing to GitHub, an Action regenerates that folder's `manifest.json`. The next visit to the tournament's stats page picks up the new games.
+2. Someone opens the tournament's stats page and clicks **Submit game results**. That's a GitHub issue form with the tournament slug prefilled — paste the CSV(s) into the text box or drag the files into the attachments box. A bot validates the submission within a minute or two and opens a pull request; a maintainer merging it publishes the games. Re-submitting a game (same packet, same two teams) replaces the earlier version instead of duplicating it.
+3. After the merge, an Action regenerates that folder's `manifest.json`. The next visit to the tournament's stats page picks up the new games.
 
-If you're testing locally without pushing, `scripts/update_manifests.py` does the same thing by hand.
+Maintainers can also skip the form and drop CSVs straight into `tournaments/<slug>/results/` — the manifest Action runs on any push that touches those folders. If you're testing locally without pushing, `scripts/update_manifests.py` does the same thing by hand.
 
-To add a new tournament, append an entry to `TOURNAMENTS` in `src/ui/roster-presets.js`, then copy `tournaments/stanford-consensus-2026/index.html` into a new folder named after the slug and change the one `<meta name="tournament-slug">` tag inside. Drop CSVs into the new `results/` folder and the hub starts showing it.
+New tournaments don't need a code change: submitting results under a fresh slug creates the registry entry and stats page automatically in the same pull request. To add one by hand instead, append an entry to `TOURNAMENTS` in `src/ui/roster-presets.js`, then copy `tournaments/stanford-consensus-2026/index.html` into a new folder named after the slug and change the one `<meta name="tournament-slug">` tag inside. Drop CSVs into the new `results/` folder and the hub starts showing it.
 
 ## Roster modes
 
@@ -68,6 +68,10 @@ npm test
 ```
 
 About 150 tests via Vitest + happy-dom. They cover the PDF question parser, the `.docx` parser (including the streak-slot inference heuristic), the `.txt` pack parser, the scoring reducers, the CSV export round-trip, the tournament aggregator, and a structural sweep over every CSV under `tournaments/*/results/`.
+
+## Contributing
+
+Bug reports and feature ideas are welcome — [open an issue](https://github.com/consensus-scorekeeper/consensus-scorekeeper.github.io/issues). Pull requests are welcome too; see [CONTRIBUTING.md](CONTRIBUTING.md) for how to get a dev setup running (there's no build step) and where things live. Publishing tournament results never requires touching code — that's what the submission form above is for.
 
 ## Internal notes
 

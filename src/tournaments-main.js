@@ -8,9 +8,16 @@
 
 import { TOURNAMENTS } from './ui/roster-presets.js';
 import { escapeHtml } from './util/escape.js';
+import { createTournamentLink } from './ui/submission-links.js';
 
 const list = document.getElementById('tournaments-list');
 const search = document.getElementById('tournaments-search');
+
+// "Create your own tournament" link — submitting game CSVs under a fresh slug
+// via the GitHub form creates that tournament's stats page automatically, so
+// community tournaments don't need a maintainer code change to appear here.
+const searchRow = document.querySelector('.tournaments-search-row');
+if (searchRow) searchRow.parentNode.insertBefore(createTournamentLink(), searchRow);
 
 function matches(t, q) {
   if (!q) return true;

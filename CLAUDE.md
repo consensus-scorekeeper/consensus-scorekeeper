@@ -49,8 +49,11 @@ tournaments/
 src/
   main.js               ← scorekeeper entry: imports modules, wires DOM, loadState()
   stats-main.js         ← per-tournament-stats-page entry: reads slug from <meta>,
-                          stamps title from TOURNAMENTS[slug], loads results/manifest.json
+                          stamps title from TOURNAMENTS[slug], injects the
+                          submit-results + create-tournament links, loads
+                          results/manifest.json
   tournaments-main.js   ← tournaments/index.html entry: hub list + search filter
+                          + create-tournament link
   state.js              ← state singleton + reducers + subscribe()
   loader.js             ← parsePdf / parseDocx / parseTextFile / processZipBuffer / handleZipUpload
                           orchestrators; every format lands in one applyParseResult()
@@ -95,15 +98,20 @@ src/
     pdf-viewer.js       ← inline + fullscreen pack viewer: pdf.js canvas for PDFs,
                           rendered state.packDoc text for .docx/.txt packs
     scoreboard-popout.js ← BroadcastChannel + popout HTML template
-    pack-browser.js     ← PACK_CATALOG, fetchWithFallback, renderBrowser
+    pack-browser.js     ← PACK_CATALOG + renderBrowser + fetchWithFallback (relay
+                          chain: serve.py /proxy/ (local dev) → our Cloudflare
+                          Worker (PACK_PROXY_BASE, source in workers/pack-proxy/)
+                          → public CORS proxies → manual download-it-yourself link)
     keybinds.js         ← global keydown listener
     splitter.js         ← attachSplitter
     dev-tools.js        ← reparseCurrentPdf, applyCustomAward, populateCustomAward
     tutorial.js         ← startTutorialGame: boots a sandbox session w/ preset rosters + pack
     tutorial-overlay.js ← 13-step coach-marks overlay engine (multi-target highlight)
     tournament-stats.js ← setupTournamentStats: manifest fetch + view router
-    submit-results.js   ← "Submit Results" button: opens the GitHub submit-results
-                          issue form prefilled with the current game's CSV
+    submission-links.js ← DOM builders for the submit-results / create-tournament
+                          links (both open the GitHub issue form via
+                          util/submit-results.js); used by stats-main.js and
+                          tournaments-main.js, so page-agnostic
     format-pack.js      ← "Format your own pack" modal: fills assets/text-pack-llm-prompt.txt
                           with user-pasted raw questions, copies prompt to clipboard, then
                           loads the LLM's reformatted output via parseTextFile
@@ -112,6 +120,9 @@ src/
   util/
     escape.js           ← escapeHtml, csvEscape
     csv.js              ← buildResultsCsv, buildResultsFilename (used by exportCsv)
+    submit-results.js   ← submitResultsUrl: URL of the GitHub submit-results issue
+                          form (slug prefilled when given); rendered as links by
+                          ui/submission-links.js
     parse-results-csv.js ← parseResultsCsv: round-trip of buildResultsCsv output
     tournament-aggregate.js ← aggregateTournament + gamesForTeam + gamesForPlayer
     roster-text.js      ← parseRosterText / serializeRosterText / slugifyName:
@@ -133,6 +144,11 @@ scripts/                ← helpers; run from anywhere (paths use __file__)
                                   change is intended, and review the JSON diff
   process-submission.mjs       ← Node (not Python): drives the results-submission Action;
                                   imports src/util modules directly ("type": "module")
+workers/
+  pack-proxy/           ← Cloudflare Worker: CORS relay for consensustrivia.com packs
+                          (worker.js + wrangler.toml + README.md with deploy steps and
+                          the security model); its deployed URL is PACK_PROXY_BASE in
+                          src/ui/pack-browser.js
 .github/
   ISSUE_TEMPLATE/
     submit-results.yml  ← public intake form for tournament results CSVs
@@ -167,9 +183,9 @@ tests/                  ← vitest tests; run with `npm test`
   - `consensus-custom-tournaments-v1` — user-created tournaments-with-rosters (ui/custom-tournaments.js)
 - **Multiple pages share modules**, so anything imported by `stats-main.js`
   or `tournaments-main.js` must not assume scorekeeper-only DOM exists.
-  `tournament-stats.js`, the util modules, and `roster-presets.js` are
-  page-agnostic; everything else in `ui/` (setup.js, game.js, pdf-viewer.js,
-  etc.) is index.html-only.
+  `tournament-stats.js`, `submission-links.js`, the util modules, and
+  `roster-presets.js` are page-agnostic; everything else in `ui/`
+  (setup.js, game.js, pdf-viewer.js, etc.) is index.html-only.
 
 ## Roster mode toggle
 
@@ -420,11 +436,19 @@ Scorers publish games themselves instead of sending CSVs to the
 maintainer. The intake is the "Submit game results" issue form
 (`.github/ISSUE_TEMPLATE/submit-results.yml`): a tournament-slug input, a
 paste-the-CSV textarea (`render: text`, so GitHub fences it), and an
-attachments box for dragging in exported `.csv` files. The scorekeeper's
-**Submit Results** button (`ui/submit-results.js`, next to Export CSV)
-opens that form prefilled with the current game's CSV and the selected
-built-in tournament's slug; past ~6.5k chars of URL it falls back to
-clipboard-copy + blank form (GitHub 414s long URLs).
+attachments box for dragging in exported `.csv` files. Every
+per-tournament stats page renders a **Submit game results →** link
+(injected by `stats-main.js` via `ui/submission-links.js`, so
+pipeline-generated pages get it with no per-page HTML) that opens the
+form with that tournament's slug prefilled; the scorer pastes or attaches
+the CSV(s) from the scorekeeper's **Export CSV** button. The stats hub
+and each per-tournament page also render a **Create its stats page →**
+link — the same form with no slug prefilled — since submitting games
+under a fresh slug is how a new tournament gets created (see below).
+(The submit button originally lived in the scorekeeper's controls bar and
+prefilled the CSV through the URL — it moved to the stats pages so
+submitting sits next to where results are published, and CSV-in-URL
+prefill kept hitting GitHub's ~6.5k-char 414 limit anyway.)
 
 `process-submission.yml` runs on issues labeled `results-submission`
 (opened *and* edited — a rejected submission is fixed by editing the
@@ -471,9 +495,9 @@ The repo lives at `consensus-scorekeeper/consensus-scorekeeper.github.io`
 (transferred from `denisfliu/consensus-scorekeeper` in July 2026), so
 GitHub Pages serves it at the org root: https://consensus-scorekeeper.github.io/.
 Keep **all URLs relative** — the site must also work under a subpath
-(local `serve.py`, any future mirror). The submit-results button targets
+(local `serve.py`, any future mirror). The submit-results link targets
 the canonical repo explicitly (`SUBMISSIONS_REPO` in
-`ui/submit-results.js`), never `location.href`, so copies of the site
+`util/submit-results.js`), never `location.href`, so copies of the site
 still file submissions in the right place.
 
 ## Tests
@@ -515,6 +539,8 @@ transparent to tests. Notable test files:
                                      through the real data-action dispatcher
 - `submission.test.js`             — results-submission planning: bundle splitting,
                                      content-based game identity, replace-vs-add
+- `submit-results.test.js`         — submitResultsUrl targets the canonical repo's
+                                     issue form with the slug prefilled
 
 If you add stats functionality, add fixtures + assertions there so the
 manifest can't silently drift.
@@ -580,3 +606,24 @@ site reorganized something the scraper didn't anticipate.
 
 If the site changes its markup, those assumptions are the first places
 to look.
+
+## Pack downloads (CORS relay)
+
+consensustrivia.com serves its packs with **no CORS header**, so no
+deployment of the site can `fetch()` them directly — every download goes
+through a relay. `fetchWithFallback` in `src/ui/pack-browser.js` walks a
+chain of attempts in order:
+
+1. `serve.py`'s `/proxy/` (local dev only),
+2. **our Cloudflare Worker relay** — `PACK_PROXY_BASE`, source in
+   `workers/pack-proxy/`; this is the reliable path in production,
+3. free public CORS proxies (legacy fallback; rate-limited, often down),
+4. a manual "download it yourself, then drop it in the upload box" link,
+   so pack browsing degrades to plain downloads instead of breaking.
+
+Deploy steps and the Worker's security model (upstream host + path
+allowlists, Origin/Referer soft gate, free-plan 100k req/day hard cap —
+do **not** enable Workers Paid) live in `workers/pack-proxy/README.md`.
+If the Worker is ever redeployed under a new URL, update
+`PACK_PROXY_BASE` in `src/ui/pack-browser.js`; setting it to `''`
+disables that hop without breaking the chain.

@@ -95,6 +95,12 @@
     <button type="button" class="browse-toggle" data-action="open-format-pack" title="Convert your own raw questions into a scorekeeper-ready pack via an LLM">Format pack</button>
     <button type="button" class="browse-toggle" data-action="clear-and-reload">Clear saved game</button>
   </div>
+  <p class="site-footer">
+    This scorekeeper is open source on
+    <a href="https://github.com/consensus-scorekeeper/consensus-scorekeeper.github.io" target="_blank" rel="noopener">GitHub</a>.
+    Found a bug or have an idea?
+    <a href="https://github.com/consensus-scorekeeper/consensus-scorekeeper.github.io/issues" target="_blank" rel="noopener">Open an issue</a>.
+  </p>
 </div>
 
 <!-- ==================== FORMAT PACK MODAL ==================== -->
@@ -276,8 +282,7 @@
         <span><kbd>Ctrl+Z</kbd> Undo</span>
         <button class="btn undo-btn" id="undo-btn" data-action="undo-last" disabled>Undo Last</button>
         <button class="btn" id="toggle-inline-pdf-btn" data-action="toggle-inline-pdf">Hide Pack</button>
-        <button class="btn" data-action="export-csv">Export CSV</button>
-        <button class="btn" data-action="submit-results" title="Publish this game to the public tournament stats page (opens a prefilled GitHub form)">Submit Results</button>
+        <button class="btn" data-action="export-csv" title="Download this game as a CSV — publish it via the Submit-game-results link on the tournament's stats page">Export CSV</button>
         <details class="dev-tools" id="dev-tools">
           <summary>Dev Tools &#9662;</summary>
           <div class="dev-tools-panel">
