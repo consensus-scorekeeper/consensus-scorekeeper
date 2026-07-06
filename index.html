@@ -44,6 +44,15 @@
       <label style="font-weight:600;">Select a pack:</label>
       <select id="zip-pack-dropdown" style="margin-left: 8px; padding: 6px; border: 1px solid #ccc; border-radius: 6px;"></select>
     </div>
+    <details class="parse-report" id="parse-report" style="display:none">
+      <summary id="parse-report-summary"></summary>
+      <ul class="parse-report-list" id="parse-report-list"></ul>
+      <div class="parse-report-nudge" id="parse-report-nudge" style="display:none">
+        This pack parsed roughly. For a clean, reviewable version, paste its raw text into
+        <button type="button" class="browse-toggle" data-action="open-format-pack">Format pack</button>
+        — an LLM reformats it into the scorekeeper's native format.
+      </div>
+    </details>
     <button type="button" class="browse-toggle" id="browse-toggle">Or browse packs from consensustrivia.com</button>
     <div class="pack-browser" id="pack-browser">
       <div class="browser-tabs">
@@ -221,6 +230,7 @@
           <div class="question-instructions" id="q-instructions" style="display:none"></div>
           <div class="question-text" id="q-text"></div>
           <div class="question-answer" id="q-answer"></div>
+          <div class="q-parse-warning" id="q-parse-warning" style="display:none"></div>
           <div id="q-answered-by" style="display:none;margin:4px 0;font-size:0.9rem;color:#555;"></div>
           <div id="streak-status" style="display:none;margin:6px 0;padding:6px 10px;background:#f5f5f5;border:1px solid #ddd;border-radius:4px;font-size:0.95rem;"></div>
           <div class="question-nav">

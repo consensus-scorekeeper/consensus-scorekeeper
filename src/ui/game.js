@@ -6,6 +6,7 @@
 
 import { state, subscribe } from '../state.js';
 import { escapeHtml } from '../util/escape.js';
+import { issueSlotSet } from '../parser/diagnostics.js';
 import { rebuildJailbreakLocks } from '../game/jailbreak.js';
 import { getInitials, getAnsweredBy } from '../game/categories.js';
 import { saveState } from '../game/persistence.js';
@@ -198,7 +199,31 @@ export function renderQuestion() {
     }
   }
 
+  // Per-slot parse warnings (from the pack's suspected-parsing-issues
+  // report). For streak slots, any issue on any member slot applies.
+  const warnEl = document.getElementById('q-parse-warning');
+  if (warnEl) {
+    let slotNums = [];
+    if (q && q.isStreak && q.streakGroupStart != null) {
+      const sg = state.streakGroups[q.streakGroupStart];
+      slotNums = sg ? sg.members.map(m => state.questions[m].num) : [q.num];
+    } else if (q) {
+      slotNums = [q.num];
+    }
+    const slotWarnings = (state.parseIssues || []).filter(issue =>
+      (typeof issue.slot === 'number' && slotNums.includes(issue.slot)) ||
+      (Array.isArray(issue.slots) && slotNums.some(n => n >= issue.slots[0] && n <= issue.slots[1])));
+    if (slotWarnings.length) {
+      warnEl.innerHTML = slotWarnings.map(i => `&#9888; ${escapeHtml(i.message)}`).join('<br>');
+      warnEl.style.display = 'block';
+    } else {
+      warnEl.style.display = 'none';
+      warnEl.innerHTML = '';
+    }
+  }
+
   // Build vertical sidebar with category groups
+  const issueSlots = issueSlotSet(state.parseIssues);
   const sidebarEl = document.getElementById('q-sidebar');
   const groups = [];
   let currentCat = undefined;
@@ -268,7 +293,11 @@ export function renderQuestion() {
         }
       }
       const answeredClass = isAnswered ? 'answered' : '';
-      return `<button class="q-btn ${activeClass} ${answeredClass} ${answeredTeamClass}" data-action="goto" data-index="${i}">${displayLabel}${answeredTag}</button>`;
+      const flagNums = streakGroup ? streakGroup.members.map(m => state.questions[m].num) : [q.num];
+      const issueFlag = flagNums.some(n => issueSlots.has(n))
+        ? '<span class="q-issue-flag" title="Suspected parsing issue on this slot — see the parse report on the setup screen">&#9888;</span>'
+        : '';
+      return `<button class="q-btn ${activeClass} ${answeredClass} ${answeredTeamClass}" data-action="goto" data-index="${i}">${displayLabel}${issueFlag}${answeredTag}</button>`;
     }).join('');
 
     const label = g.category

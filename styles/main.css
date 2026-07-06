@@ -361,6 +361,40 @@ body {
 .pdf-status.warn { color: #e65100; }
 .pdf-status.error { color: #c00; }
 
+/* Suspected-parsing-issues report (rendered by ui/parse-report.js) */
+.parse-report {
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: #fff8f0;
+  border: 1px solid #f0c58f;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+.parse-report summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: #e65100;
+}
+.parse-report-list {
+  margin: 8px 0 4px;
+  padding-left: 22px;
+}
+.parse-report-list li { margin: 3px 0; color: #7a4a00; }
+.parse-report-list li.error { color: #c00; }
+.parse-report-list li code {
+  background: #f5ede2;
+  padding: 0 4px;
+  border-radius: 3px;
+  font-size: 0.85em;
+}
+.parse-report-nudge {
+  margin: 8px 0 4px;
+  padding-top: 6px;
+  border-top: 1px dashed #f0c58f;
+  color: #7a4a00;
+}
+.parse-report-nudge .browse-toggle { margin-top: 0; }
+
 /* Online pack browser */
 .browse-toggle {
   margin-top: 12px;
@@ -508,6 +542,22 @@ body {
   font-size: 0.75rem;
 }
 .q-btn.missing:hover { background: #f5f5f5; }
+.q-issue-flag {
+  margin-left: 3px;
+  font-size: 0.7rem;
+  color: #e65100;
+}
+
+/* Per-slot parse warning inside the question panel */
+.q-parse-warning {
+  margin: 4px 0;
+  padding: 4px 10px;
+  background: #fff8f0;
+  border: 1px solid #f0c58f;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  color: #7a4a00;
+}
 
 /* PDF viewer overlay */
 .pdf-overlay {
