@@ -78,8 +78,9 @@ setupPackBrowser();
 setupFormatPack();
 setupRosterManager();
 
-// File picker on the setup screen — uploads a PDF, a zip-of-PDFs, a .docx,
-// or a .txt pack. The non-PDF formats are text-only (no inline PDF viewer).
+// File picker on the setup screen — uploads a .pdf, .docx, or .txt pack,
+// or a .zip holding any mix of those. The non-PDF formats are text-only
+// (no inline PDF viewer).
 document.getElementById('pdf-input').addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if (!file) return;

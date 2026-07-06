@@ -252,11 +252,14 @@ dispatches in `src/main.js` by extension to a format **adapter**:
   near the core or pdf adapter must keep `tests/golden-pdf.test.js`
   green (byte-exact fixtures for two real packs; regenerate deliberately
   with `node scripts/generate-golden.mjs`).
-- **`.zip`** → `processZipBuffer`. The dropdown gets one entry per PDF;
-  the first auto-loads, and the rest parse in the background so each
-  dropdown entry shows a per-pack verdict ("Pack 3.pdf — 2 warnings").
-  Cached parses are reused on selection; a new upload abandons the old
-  annotation loop (generation counter).
+- **`.zip`** → `processZipBuffer`. A zip may hold any mix of `.pdf`,
+  `.docx`, and `.txt` packs — `zipEntryFormat()` routes each entry to
+  its adapter (and drops folders / `__MACOSX` junk). The dropdown gets
+  one entry per pack; the first auto-loads, and the rest parse in the
+  background so each dropdown entry shows a per-pack verdict
+  ("Pack 3.pdf — 2 warnings"). Cached parses are reused on selection
+  (PDF bytes are re-copied so pdf.js can't detach the cached entry); a
+  new upload abandons the old annotation loop (generation counter).
 - **`.docx`** → `parseDocx` → `parseDocxBuffer`
   (`parser/docx-questions.js`). Docx packets have no question numbers,
   so the adapter *transpiles* paragraphs into canonical numbered lines:

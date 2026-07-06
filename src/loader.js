@@ -87,13 +87,53 @@ export async function parsePdf(arrayBuffer, filename) {
   }
 }
 
-// Zip uploads: after the first pack loads, the remaining packs are parsed
-// in the background so the dropdown can show a per-pack issue summary. The
+// Zip uploads: a zip may hold any mix of the supported pack formats
+// (.pdf, .docx, .txt); each entry is dispatched to its format adapter.
+// After the first pack loads, the remaining packs are parsed in the
+// background so the dropdown can show a per-pack issue summary. The
 // generation counter abandons an in-flight annotation loop when a new
 // upload supersedes it; the cache lets re-selecting an annotated pack skip
 // the re-parse.
 let zipGeneration = 0;
 let zipParseCache = new Map(); // name → { questions, issues, totalSlots } | null (parse failed)
+
+// Which adapter a zip entry belongs to, or null for entries we don't parse
+// (folders, macOS junk like __MACOSX/ and ._AppleDouble files, other types).
+export function zipEntryFormat(name) {
+  if (name.startsWith('__MACOSX/')) return null;
+  const base = name.split('/').pop();
+  if (!base || base.startsWith('.')) return null;
+  const lower = base.toLowerCase();
+  if (lower.endsWith('.pdf')) return 'pdf';
+  if (lower.endsWith('.docx')) return 'docx';
+  if (lower.endsWith('.txt')) return 'txt';
+  return null;
+}
+
+// Parse one zip entry through its adapter + whole-pack checks, without
+// touching state or the DOM (used by the background annotation).
+async function parseZipEntryToResult(name, data) {
+  const format = zipEntryFormat(name);
+  if (format === 'pdf') return parsePdfToResult(data);
+  let parsed;
+  if (format === 'docx') {
+    parsed = await parseDocxBuffer(data.slice(0));
+  } else {
+    parsed = parseTextPack(new TextDecoder('utf-8').decode(data));
+  }
+  const { questions, issues } = parsed;
+  issues.push(...analyzeQuestions(questions, { source: format }));
+  return { questions, issues, totalSlots: computeTotalSlots(questions) };
+}
+
+// Full load of a zip entry into state (status line, persistence, report),
+// via the same entry points the file picker uses.
+async function loadZipEntry(name, data) {
+  const format = zipEntryFormat(name);
+  if (format === 'pdf') await parsePdf(data, name);
+  else if (format === 'docx') await parseDocx(data.slice(0), name);
+  else await parseTextFile(new TextDecoder('utf-8').decode(data), name);
+}
 
 function zipOptionLabel(name, result) {
   if (!result) return `${name} — parse failed`;
@@ -117,7 +157,7 @@ async function annotateZipPacks(names, generation) {
     if (zipParseCache.has(name)) continue;
     let result = null;
     try {
-      result = await parsePdfToResult(state.zipPacks.get(name));
+      result = await parseZipEntryToResult(name, state.zipPacks.get(name));
     } catch {
       result = null;
     }
@@ -136,24 +176,31 @@ function applyCachedZipResult(filename, data, result) {
   state.packName = filename;
   state.parseIssues = [];
   if (state.pdfViewer) state.pdfViewer.doc = null;
-  state.pdfBytes = new Uint8Array(data); // copy — the viewer may detach it
-  applyParseResult({ filename, ...result, isPdf: true });
+  const isPdf = zipEntryFormat(filename) === 'pdf';
+  if (isPdf) {
+    // Copy — pdf.js detaches the buffer it renders, and the cached zip
+    // entry must survive re-selection.
+    state.pdfBytes = new Uint8Array(data.slice(0));
+  } else {
+    state.pdfBytes = null;
+    clearSavedPdfBytes();
+  }
+  applyParseResult({ filename, ...result, isPdf });
 }
 
 export async function processZipBuffer(buffer) {
   setStatus('Reading zip file...');
   try {
-    const { entries } = await readZip(buffer);
-    const pdfEntries = entries.filter(e => e.name.endsWith('.pdf'));
-    if (pdfEntries.length === 0) {
-      setStatus('No PDF files found in zip.', 'error');
+    const { entries } = await readZip(buffer, (name) => !!zipEntryFormat(name));
+    if (entries.length === 0) {
+      setStatus('No .pdf, .docx, or .txt packs found in zip.', 'error');
       return;
     }
     zipGeneration++;
     zipParseCache = new Map();
     const generation = zipGeneration;
     state.zipPacks = new Map();
-    for (const entry of pdfEntries) {
+    for (const entry of entries) {
       state.zipPacks.set(entry.name, entry.data);
     }
     const names = [...state.zipPacks.keys()].sort();
@@ -167,11 +214,11 @@ export async function processZipBuffer(buffer) {
         if (!data) return;
         const cached = zipParseCache.get(selected);
         if (cached) applyCachedZipResult(selected, data, cached);
-        else await parsePdf(data, selected);
+        else await loadZipEntry(selected, data);
       };
     }
     if (selectDiv) selectDiv.style.display = 'block';
-    await parsePdf(state.zipPacks.get(names[0]), names[0]);
+    await loadZipEntry(names[0], state.zipPacks.get(names[0]));
     // Fire-and-forget: annotate every pack (including the first, so its
     // label gets a verdict too) without blocking the upload flow.
     annotateZipPacks(names, generation);
