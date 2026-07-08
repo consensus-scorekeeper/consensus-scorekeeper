@@ -431,6 +431,14 @@ body {
   font-size: 0.9rem;
 }
 .browser-tab.active { background: #111; color: #fff; border-color: #111; }
+.browser-level { margin-bottom: 18px; }
+.browser-level-label {
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #ddd;
+}
 .browser-season { margin-bottom: 14px; }
 .browser-season-label {
   font-size: 0.8rem;

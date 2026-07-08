@@ -56,10 +56,10 @@ export const PACK_CATALOG = [
 // packs with `Access-Control-Allow-Origin: *`. Spring 2024's two "XL" packs
 // ride in `extraPacks` (they're extra content beyond the numbered packs).
 export const GRADWRITE_CATALOG = [
-  { source: 'gradwrite', level: 'post-secondary', season: '2024-25', tournament: 'Gradwrite Summer Open', dir: 'T4', filePrefix: 'Gradwrite-Summer-Open-2025', packCount: 10, directCors: true },
-  { source: 'gradwrite', level: 'high-school', season: '2024-25', tournament: 'Gradwrite Spring', dir: 'T3', filePrefix: 'Gradwrite-Spring-2025', packCount: 10, directCors: true },
-  { source: 'gradwrite', level: 'high-school', season: '2024-25', tournament: 'Consensus Gradwrite Fall', dir: 'T2', filePrefix: 'Consensus-Gradwrite-Fall-2024', packCount: 11, directCors: true },
-  { source: 'gradwrite', level: 'high-school', season: '2023-24', tournament: 'Gradwrite Spring', dir: 'T1', filePrefix: 'Gradwrite-Spring-2024', packCount: 11, extraPacks: ['XL1', 'XL2'], directCors: true },
+  { source: 'gradwrite', level: 'post-secondary', season: '2024-25', tournament: 'Summer Open 2025', dir: 'T4', filePrefix: 'Gradwrite-Summer-Open-2025', packCount: 10, directCors: true },
+  { source: 'gradwrite', level: 'high-school', season: '2024-25', tournament: 'Spring 2025', dir: 'T3', filePrefix: 'Gradwrite-Spring-2025', packCount: 10, directCors: true },
+  { source: 'gradwrite', level: 'high-school', season: '2024-25', tournament: 'Consensus Gradwrite Fall 2024', dir: 'T2', filePrefix: 'Consensus-Gradwrite-Fall-2024', packCount: 11, directCors: true },
+  { source: 'gradwrite', level: 'high-school', season: '2023-24', tournament: 'Spring 2024', dir: 'T1', filePrefix: 'Gradwrite-Spring-2024', packCount: 11, extraPacks: ['XL1', 'XL2'], directCors: true },
 ];
 
 // Everything the browser renders: the scraped Consensus catalog + the
@@ -139,36 +139,54 @@ function renderManualFallback(statusEl, url, filename) {
     `then drop the file into the upload box above.`;
 }
 
-let activeBrowserLevel = 'post-secondary';
+let activeBrowserSource = 'consensus';
+
+// Per-source division ordering + display labels. Consensus splits by school
+// level; Gradwrite's site calls its divisions "High School" and "Open" (the
+// Open tournaments reuse the 'post-secondary' level key internally).
+const LEVEL_ORDER = {
+  consensus: ['post-secondary', 'high-school'],
+  gradwrite: ['high-school', 'post-secondary'],
+};
+const LEVEL_LABELS = {
+  consensus: { 'post-secondary': 'Post-Secondary', 'high-school': 'High School' },
+  gradwrite: { 'post-secondary': 'Open Division', 'high-school': 'High School Division' },
+};
 
 function renderBrowser() {
   const container = document.getElementById('browser-content');
   if (!container) return;
-  const tournaments = FULL_CATALOG.filter(t => t.level === activeBrowserLevel);
-  const bySeason = {};
-  for (const t of tournaments) {
-    if (!bySeason[t.season]) bySeason[t.season] = [];
-    bySeason[t.season].push(t);
-  }
-  const seasons = Object.keys(bySeason).sort().reverse();
-  const html = seasons.map(season => {
-    const rows = bySeason[season].map((t) => {
-      const tIdx = FULL_CATALOG.indexOf(t);
-      const packBtns = [];
-      const packLabels = [];
-      for (let n = 1; n <= t.packCount; n++) packLabels.push(String(n));
-      packLabels.push(...(t.extraPacks || []));
-      for (const n of packLabels) {
-        packBtns.push(`<button class="browser-pack-btn" data-action="pack" data-tidx="${tIdx}" data-pack="${n}" title="Pack ${n}">${n}</button>`);
-      }
-      const zipBtn = `<button class="browser-pack-btn zip" data-action="zip" data-tidx="${tIdx}" title="Download all packs as zip">All ZIP</button>`;
-      return `
-        <div class="browser-tournament">
-          <div class="browser-tournament-name">${escapeHtml(t.tournament)}</div>
-          <div class="browser-tournament-actions">${packBtns.join('')}${zipBtn}</div>
-        </div>`;
+  const entries = FULL_CATALOG.filter(t => (t.source || 'consensus') === activeBrowserSource);
+  const html = (LEVEL_ORDER[activeBrowserSource] || []).map(level => {
+    const tournaments = entries.filter(t => t.level === level);
+    if (!tournaments.length) return '';
+    const bySeason = {};
+    for (const t of tournaments) {
+      if (!bySeason[t.season]) bySeason[t.season] = [];
+      bySeason[t.season].push(t);
+    }
+    const seasons = Object.keys(bySeason).sort().reverse();
+    const seasonsHtml = seasons.map(season => {
+      const rows = bySeason[season].map((t) => {
+        const tIdx = FULL_CATALOG.indexOf(t);
+        const packBtns = [];
+        const packLabels = [];
+        for (let n = 1; n <= t.packCount; n++) packLabels.push(String(n));
+        packLabels.push(...(t.extraPacks || []));
+        for (const n of packLabels) {
+          packBtns.push(`<button class="browser-pack-btn" data-action="pack" data-tidx="${tIdx}" data-pack="${n}" title="Pack ${n}">${n}</button>`);
+        }
+        const zipBtn = `<button class="browser-pack-btn zip" data-action="zip" data-tidx="${tIdx}" title="Download all packs as zip">All ZIP</button>`;
+        return `
+          <div class="browser-tournament">
+            <div class="browser-tournament-name">${escapeHtml(t.tournament)}</div>
+            <div class="browser-tournament-actions">${packBtns.join('')}${zipBtn}</div>
+          </div>`;
+      }).join('');
+      return `<div class="browser-season"><div class="browser-season-label">${escapeHtml(season)} Season</div>${rows}</div>`;
     }).join('');
-    return `<div class="browser-season"><div class="browser-season-label">${escapeHtml(season)} Season</div>${rows}</div>`;
+    const label = (LEVEL_LABELS[activeBrowserSource] || {})[level] || level;
+    return `<div class="browser-level"><div class="browser-level-label">${escapeHtml(label)}</div>${seasonsHtml}</div>`;
   }).join('');
   container.innerHTML = html || '<div style="color:#666;font-size:0.9rem;">No tournaments available.</div>';
 }
@@ -189,7 +207,7 @@ export function setupPackBrowser() {
 
   document.querySelectorAll('.browser-tab').forEach(tab => {
     tab.addEventListener('click', () => {
-      activeBrowserLevel = tab.dataset.level;
+      activeBrowserSource = tab.dataset.source;
       document.querySelectorAll('.browser-tab').forEach(t => t.classList.toggle('active', t === tab));
       renderBrowser();
     });
