@@ -183,10 +183,9 @@ describe('parseTextPack — full sample_txt_pack.txt fixture', () => {
   });
 });
 
-// The canonical authored format must parse with ZERO issues — this is the
-// guarantee the "Format pack" flow rests on. If a parser change breaks this,
-// the format spec (assets/text-pack-llm-prompt.txt) and the parser have
-// drifted apart.
+// The canonical authored format must parse with ZERO issues. If a parser
+// change breaks this, the parser has drifted from the documented .txt
+// format that authored packs rely on.
 describe('parseTextPack — sample fixture is issue-free', () => {
   const text = readFileSync(join(__dirname, '..', 'assets', 'sample_txt_pack.txt'), 'utf8');
   const { questions, issues } = parseTextPack(text);

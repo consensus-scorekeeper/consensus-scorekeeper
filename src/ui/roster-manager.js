@@ -1,7 +1,7 @@
 // "My tournaments" modal — create / edit / delete / export / import custom
 // tournament roster sets (see ui/custom-tournaments.js for storage and
-// util/roster-text.js for the text format). Modeled on ui/format-pack.js:
-// visibility via the 'open' class, backdrop-click + Escape to close, and an
+// util/roster-text.js for the text format). Conventions: visibility via
+// the 'open' class, backdrop-click + Escape to close (ui/modal.js), and an
 // actions object spread into main.js's ACTION_HANDLERS.
 //
 // One modal, two views toggled by data-view="list"|"editor" on the card

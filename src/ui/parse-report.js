@@ -4,7 +4,7 @@
 
 import { state } from '../state.js';
 import { escapeHtml } from '../util/escape.js';
-import { summarizeIssues, shouldNudgeFormatPack } from '../parser/diagnostics.js';
+import { summarizeIssues } from '../parser/diagnostics.js';
 
 export function renderParseReport() {
   const panel = document.getElementById('parse-report');
@@ -32,9 +32,6 @@ export function renderParseReport() {
         `${escapeHtml(where)}${escapeHtml(issue.message)}${snippet}</li>`;
     }).join('');
   }
-
-  const nudgeEl = document.getElementById('parse-report-nudge');
-  if (nudgeEl) nudgeEl.style.display = shouldNudgeFormatPack(issues) ? '' : 'none';
 
   panel.style.display = '';
 }

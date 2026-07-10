@@ -4,7 +4,6 @@ import {
   analyzeQuestions,
   issueSlotSet,
   summarizeIssues,
-  shouldNudgeFormatPack,
 } from '../src/parser/diagnostics.js';
 import { makeLine } from '../src/parser/rich-doc.js';
 
@@ -153,12 +152,5 @@ describe('issue helpers', () => {
 
   it('summarizeIssues counts by severity', () => {
     expect(summarizeIssues(issues)).toEqual({ errors: 1, warns: 2 });
-  });
-
-  it('shouldNudgeFormatPack triggers on any error or 3+ warns', () => {
-    expect(shouldNudgeFormatPack([])).toBe(false);
-    expect(shouldNudgeFormatPack([{ severity: 'warn' }])).toBe(false);
-    expect(shouldNudgeFormatPack([{ severity: 'error' }])).toBe(true);
-    expect(shouldNudgeFormatPack([{ severity: 'warn' }, { severity: 'warn' }, { severity: 'warn' }])).toBe(true);
   });
 });

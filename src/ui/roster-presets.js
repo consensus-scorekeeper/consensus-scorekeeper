@@ -1,14 +1,16 @@
-// Tournament registry. Each tournament has its own rosters and slug; the
-// slug doubles as its folder name under `tournaments/`. Three UI surfaces
-// read from here:
+// Tournament registry — the stats pages' source of truth. Each tournament
+// has its own rosters and slug; the slug doubles as its folder name under
+// `tournaments/`. Two UI surfaces read from here:
 //   1. tournaments/index.html  — the hub lists every TOURNAMENTS entry,
 //                                linking to `<slug>/` (relative to the hub).
-//   2. The setup-screen "Tournament rosters" toggle. When the toggle is
-//      ON, the moderator picks a tournament from a dropdown; that
-//      tournament's rosters populate the team-name <select>s.
-//   3. The per-tournament stats page at tournaments/<slug>/index.html
+//   2. The per-tournament stats page at tournaments/<slug>/index.html
 //      stamps its title from the matching entry. The page identifies
 //      itself via a <meta name="tournament-slug"> tag.
+//
+// The scorekeeper's Tournament Mode picker deliberately does NOT read this
+// registry — it lists only the user's own tournaments
+// (ui/custom-tournaments.js). Registry slugs still reserve their names
+// (generateSlug never shadows one).
 //
 // To add a new tournament:
 //   1. Append a new object to TOURNAMENTS below (set slug to the desired
@@ -36,10 +38,6 @@ export const TOURNAMENTS = [
     ],
   },
 ];
-
-// The "current/most-recent" tournament. Drives the default selection in
-// the setup-screen tournament dropdown.
-export const DEFAULT_TOURNAMENT = TOURNAMENTS[0];
 
 export function getTournamentBySlug(slug) {
   return TOURNAMENTS.find((t) => t.slug === slug) || null;

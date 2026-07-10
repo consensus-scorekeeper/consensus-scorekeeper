@@ -1,7 +1,6 @@
-// Shared plumbing for the setup-screen modals (format-pack, roster manager).
-// Both modals use the same markup conventions: visibility via the 'open'
-// class on the backdrop element and a status line styled by
-// .format-modal-status.
+// Shared plumbing for setup-screen modals (currently the roster manager).
+// Markup conventions: visibility via the 'open' class on the backdrop
+// element and a status line styled by .format-modal-status.
 
 export function setStatus(el, message, kind) {
   if (!el) return;

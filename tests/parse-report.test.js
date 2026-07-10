@@ -35,16 +35,4 @@ describe('renderParseReport', () => {
     // Snippets are escaped, not injected as markup.
     expect(items[2].querySelector('code').textContent).toBe('Second <version>');
   });
-
-  it('shows the Format-pack nudge on any error', () => {
-    state.parseIssues = [{ severity: 'error', code: 'x', message: 'boom' }];
-    renderParseReport();
-    expect(document.getElementById('parse-report-nudge').style.display).not.toBe('none');
-  });
-
-  it('keeps the nudge hidden for a lone warning', () => {
-    state.parseIssues = [{ severity: 'warn', code: 'x', message: 'meh' }];
-    renderParseReport();
-    expect(document.getElementById('parse-report-nudge').style.display).toBe('none');
-  });
 });

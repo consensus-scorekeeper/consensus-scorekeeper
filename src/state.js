@@ -54,6 +54,19 @@ function notify() {
   }
 }
 
+// ==================== SELECTORS ====================
+
+// True when state carries actual game progress (points on the board or
+// scoring history). Drives the setup screen's Resume Game button and the
+// Start Game overwrite warning — a fresh roster with no scoring yet is not
+// worth warning about.
+export function hasGameInProgress() {
+  return state.history.length > 0
+    || state.answeredQuestions.size > 0
+    || state.teamA.score !== 0
+    || state.teamB.score !== 0;
+}
+
 // ==================== REDUCERS ====================
 
 export function addPoints(team, playerIndex, points) {

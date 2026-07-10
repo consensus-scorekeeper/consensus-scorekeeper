@@ -125,7 +125,7 @@ export function buildTournamentEntry({ name, slug, description, rosters }) {
 
 // Insert an entry (from buildTournamentEntry) at the end of the
 // TOURNAMENTS array in roster-presets.js source text. Appending keeps
-// DEFAULT_TOURNAMENT (= TOURNAMENTS[0]) stable.
+// the existing entries (and their order) stable.
 export function insertTournamentEntry(source, entryJson) {
   const open = source.indexOf('export const TOURNAMENTS = [');
   if (open === -1) throw new Error('TOURNAMENTS array not found in roster-presets.js');

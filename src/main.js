@@ -15,6 +15,7 @@
 
 import {
   state,
+  hasGameInProgress,
   addPoints,
   clearPlayerPoints,
   clearCurrentQuestion,
@@ -26,7 +27,7 @@ import {
 import { rebuildJailbreakLocks } from './game/jailbreak.js';
 import { rebuildStreakGroups } from './game/streaks.js';
 import { getInitials, getAnsweredBy, getSplitPair, getCategoryRunSize } from './game/categories.js';
-import { STORAGE_KEY, PDF_STORAGE_KEY, isGameVisible, saveState, savePdfBytes, loadPdfBytes, clearSavedState } from './game/persistence.js';
+import { STORAGE_KEY, saveState, savePdfBytes, loadPdfBytes, clearSavedState } from './game/persistence.js';
 import { addPlayer, removePlayer, renderRoster, setupSetupScreen, setTeamNameField, toggleRosterMode } from './ui/setup.js';
 import { parsePdf, parseDocx, parseTextFile, processZipBuffer, handleZipUpload } from './loader.js';
 import { readZip, looksLikePdfOrZip } from './parser/zip.js';
@@ -62,7 +63,6 @@ import {
 import { pushScoreboardUpdate, popOutScoreboard } from './ui/scoreboard-popout.js';
 import { setupPackBrowser } from './ui/pack-browser.js';
 import { startTutorialGame } from './ui/tutorial.js';
-import { setupFormatPack, formatPackActions } from './ui/format-pack.js';
 import { renderParseReport } from './ui/parse-report.js';
 import { setupRosterManager, rosterManagerActions } from './ui/roster-manager.js';
 
@@ -74,7 +74,6 @@ setupKeybinds({ nextQuestion: () => nextQuestion(), prevQuestion: () => prevQues
 setupSplitters();
 setupPdfViewer();
 setupPackBrowser();
-setupFormatPack();
 setupRosterManager();
 
 // File picker on the setup screen — uploads a .pdf, .docx, or .txt pack,
@@ -105,6 +104,38 @@ function clearAndReload() {
   location.reload();
 }
 
+// Keep the setup screen's session buttons honest: Resume Game only when
+// restored state actually has progress to return to, Clear saved game only
+// when there is a saved session to clear.
+function updateSessionButtons() {
+  const resumeBtn = document.getElementById('resume-btn');
+  if (resumeBtn) resumeBtn.style.display = hasGameInProgress() ? '' : 'none';
+  let hasSave = false;
+  try { hasSave = !!localStorage.getItem(STORAGE_KEY); } catch { /* ignore */ }
+  const clearBtn = document.getElementById('clear-save-btn');
+  if (clearBtn) clearBtn.style.display = hasSave ? '' : 'none';
+}
+
+// Re-enter the game screen with the restored (or backgrounded) session as
+// it stands — the counterpart of Start Game's reset.
+function resumeGame() {
+  if (!hasGameInProgress()) return;
+  document.getElementById('setup').style.display = 'none';
+  document.getElementById('game').style.display = 'block';
+  renderGame();
+}
+
+// Start Game resets scores/history, so guard it when that would discard a
+// game in progress. The confirm lives here (not in startGame) so the
+// tutorial's programmatic startGame() never prompts.
+function startGameGuarded() {
+  if (hasGameInProgress()
+      && !confirm('A game is already in progress. Start a new game? Its scores and history will be discarded (use Resume Game to continue it).')) {
+    return;
+  }
+  startGame();
+}
+
 // Trigger a CSV download. The CSV builder is pure (util/csv.js); the BOM
 // prefix keeps Excel happy with UTF-8 content.
 function exportCsv() {
@@ -112,9 +143,12 @@ function exportCsv() {
   downloadTextFile(buildResultsFilename(state), '﻿' + csv, 'text/csv;charset=utf-8;');
 }
 
-// loadState restores the last session from localStorage. Lives here because
-// it does both data restore (state mutation) and post-restore DOM updates
-// (renderRoster, renderGame), which would otherwise cross module boundaries.
+// loadState restores the last session's data from localStorage but always
+// lands on the setup screen — re-entering the game is an explicit Resume
+// Game click, never a side effect of a page refresh. Lives here because it
+// does both data restore (state mutation) and post-restore DOM updates
+// (renderRoster, session buttons), which would otherwise cross module
+// boundaries.
 function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -159,16 +193,12 @@ function loadState() {
       statusEl.textContent = `Restored "${state.packName}" from previous session.`;
       statusEl.className = 'pdf-status success';
     }
-
-    if (snap.gameActive) {
-      document.getElementById('setup').style.display = 'none';
-      document.getElementById('game').style.display = 'block';
-      renderGame();
-    }
     return true;
   } catch (e) {
     console.warn('[persist] loadState failed:', e);
     return false;
+  } finally {
+    updateSessionButtons();
   }
 }
 
@@ -180,7 +210,8 @@ function loadState() {
 // static buttons that exist in index.html itself.
 const ACTION_HANDLERS = {
   'add-player': (btn) => addPlayer(btn.dataset.team),
-  'start-game': () => startGame(),
+  'start-game': () => startGameGuarded(),
+  'resume-game': () => resumeGame(),
   'start-tutorial': () => startTutorialGame(),
   'clear-and-reload': () => clearAndReload(),
   'toggle-roster-mode': () => toggleRosterMode(),
@@ -199,8 +230,7 @@ const ACTION_HANDLERS = {
   'toggle-inline-pdf': () => toggleInlinePdf(),
   'export-csv': () => exportCsv(),
   'reparse-current-pdf': () => reparseCurrentPdf(),
-  'back-to-setup': () => backToSetup(),
-  ...formatPackActions,
+  'back-to-setup': () => { backToSetup(); updateSessionButtons(); },
   ...rosterManagerActions,
 };
 

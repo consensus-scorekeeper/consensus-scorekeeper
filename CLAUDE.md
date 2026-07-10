@@ -66,7 +66,7 @@ src/
                           issues } + computeTotalSlots + cleanTrailing + extractRichRange
                           + richToHtml
     diagnostics.js      ← makeIssue + analyzeQuestions (whole-pack checks) + issueSlotSet
-                          + summarizeIssues + shouldNudgeFormatPack (pure, DOM-free)
+                          + summarizeIssues (pure, DOM-free)
     pdf-text.js         ← pdf adapter: extractRichDocFromPdf (pdf.js → RichDoc;
                           bold = second-most-used font)
     docx-text.js        ← extractDocxParagraphs (zip → word/document.xml → runs[])
@@ -82,17 +82,18 @@ src/
     categories.js       ← getInitials, getAnsweredBy, getSplitPair, getCategoryRunSize
     persistence.js      ← saveState, loadPdfBytes, savePdfBytes, clearSavedPdfBytes, clearSavedState, isGameVisible
   ui/
-    setup.js            ← roster CRUD + Tournament-rosters on/off toggle + tournament picker
+    setup.js            ← roster CRUD + Tournament Mode on/off toggle + tournament picker
     roster-presets.js   ← TOURNAMENTS registry (slug + rosters + description; no statsPage —
-                          link is derived from slug). + DEFAULT_TOURNAMENT
+                          link is derived from slug) — stats-pages-only
                           + playerSuggestionsFor + getTournamentBySlug
-    custom-tournaments.js ← user-created tournaments (localStorage) merged with
-                          TOURNAMENTS: getAllTournaments, getAnyTournamentBySlug,
-                          generateSlug
+    custom-tournaments.js ← user-created tournaments (localStorage) — the only
+                          entries the Tournament Mode picker shows:
+                          loadCustomTournaments, getCustomTournamentBySlug,
+                          generateSlug (never shadows a registry slug)
     roster-manager.js   ← "My tournaments" modal: create/edit/delete/export/import
                           custom roster sets (list + editor views)
     modal.js            ← shared modal plumbing: setStatus + wireModalDismiss
-                          (used by format-pack.js and roster-manager.js)
+                          (used by roster-manager.js)
     download.js         ← downloadTextFile: Blob + anchor-click browser download
     drag-reorder.js     ← attachDragReorder: HTML5 drag handler for roster lists / panels
     game.js             ← renderGame (single state subscriber), renderQuestion, etc.
@@ -116,9 +117,6 @@ src/
                           links (both open the GitHub issue form via
                           util/submit-results.js); used by stats-main.js and
                           tournaments-main.js, so page-agnostic
-    format-pack.js      ← "Format your own pack" modal: fills assets/text-pack-llm-prompt.txt
-                          with user-pasted raw questions, copies prompt to clipboard, then
-                          loads the LLM's reformatted output via parseTextFile
     parse-report.js     ← renderParseReport: the "suspected parsing issues" panel under
                           the upload status (reads state.parseIssues)
   util/
@@ -136,7 +134,6 @@ src/
                           pipeline (consumed by scripts/process-submission.mjs)
 assets/
   tutorial-pack.pdf     ← bundled pack the tutorial sandbox loads
-  text-pack-llm-prompt.txt ← LLM reformatting prompt the Format-pack modal fills in
   sample_txt_pack.txt   ← full 100-slot .txt pack; fixture for tests/text-pack.test.js
 scripts/                ← helpers; run from anywhere (paths use __file__)
   serve.py is at root   ← local dev server (port 8000); also /proxy/ for consensustrivia.com
@@ -180,7 +177,13 @@ tests/                  ← vitest tests; run with `npm test`
   tournament-aggregate, csv, escape) is DOM-free.
 - **Persistence keys are namespaced and versioned.** Each subsystem owns
   its own localStorage key:
-  - `consensus-state-v1`             — saved scorekeeper game (game/persistence.js)
+  - `consensus-state-v1`             — saved scorekeeper game (game/persistence.js).
+    Restored on load by main.js's loadState(), which always lands on the
+    setup screen: re-entering the game is the explicit **Resume Game**
+    button (shown only when the restored state has actual progress —
+    `hasGameInProgress()` in state.js), **Start Game** confirm-warns
+    before discarding such progress, and **Clear saved game** (shown only
+    when a snapshot exists) wipes both keys and reloads.
   - `consensus-stats-pdf-v1`         — saved PDF bytes (game/persistence.js). Cleared on `.docx` upload via `clearSavedPdfBytes()` so the inline viewer doesn't try to render a stale PDF from the previous pack.
   - `consensus-roster-mode-v1`       — 'custom' (default) or 'preset'; legacy 'tournament' is migrated to 'preset' on read (ui/setup.js)
   - `consensus-tournament-slug-v1`   — which tournament (built-in or custom) drives the preset team-name dropdown (ui/setup.js)
@@ -191,21 +194,23 @@ tests/                  ← vitest tests; run with `npm test`
   `roster-presets.js` are page-agnostic; everything else in `ui/`
   (setup.js, game.js, pdf-viewer.js, etc.) is index.html-only.
 
-## Roster mode toggle
+## Tournament Mode toggle
 
-The setup screen has a top-right toggle labeled **"Tournament rosters"**
-with a pill switch that reads ON or OFF, plus a tournament-picker
+The Team Rosters section header carries a toggle labeled **"Tournament
+Mode"** with a pill switch that reads ON or OFF, plus a tournament-picker
 dropdown that appears alongside ON:
 
-- **Tournament rosters: OFF** (default) — team-name field is a free-text
+- **Tournament Mode: OFF** (default) — team-name field is a free-text
   `<input>`. Rosters are built manually. The tournament picker is hidden.
-- **Tournament rosters: ON** — team-name field is a `<select>` populated
+- **Tournament Mode: ON** — team-name field is a `<select>` populated
   from the chosen tournament's `rosters`. The picker (`Rosters from
-  <select>`) lists every entry in `TOURNAMENTS` plus every user-created
-  tournament (see below); changing it clears the current teams and
-  repopulates the dropdowns from the newly chosen tournament. Adding a
-  player offers an autocomplete `<datalist>` of the selected tournament's
-  players (it repopulates whenever the picker changes).
+  <select>`) lists ONLY the user's own tournaments (created via the
+  Manage button — see below); the built-in `TOURNAMENTS` registry never
+  appears here. With no tournaments yet, the picker is disabled and reads
+  "None yet — use Manage". Changing the picker clears the current teams
+  and repopulates the dropdowns from the newly chosen tournament. Adding
+  a player offers an autocomplete `<datalist>` of the selected
+  tournament's players (it repopulates whenever the picker changes).
 
 The add-player `<datalist>` is also gated on mode: in `custom` mode
 `populatePlayerSuggestions()` empties it, so a manually-typed roster
@@ -230,8 +235,8 @@ A **Manage** button next to the tournament picker (visible only in preset
 mode) opens the "My tournaments" modal (`ui/roster-manager.js`): create,
 edit, delete, export, and import user-defined tournament roster sets.
 They're stored in `consensus-custom-tournaments-v1`
-(`ui/custom-tournaments.js`) and merged into the picker under a
-"My tournaments" `<optgroup>` by `getAllTournaments()`. Key facts:
+(`ui/custom-tournaments.js`); the picker is populated from
+`loadCustomTournaments()` alone. Key facts:
 
 - The editor is one textarea holding the plain-text roster format
   (`util/roster-text.js`): first line `Tournament: <name>`, then
@@ -244,8 +249,8 @@ They're stored in `consensus-custom-tournaments-v1`
 - After any create/edit/delete the manager calls setup.js's
   `refreshTournamentPicker({ mutatedSlug })`, which rebuilds the picker,
   re-applies the selected tournament if it was the one edited, and falls
-  back to `DEFAULT_TOURNAMENT` (clearing teams only in preset mode) if
-  the selected one was deleted.
+  back to the first remaining tournament — or to none — (clearing teams
+  only in preset mode) if the selected one was deleted.
 - Custom tournaments never appear on the public stats hub or stats
   pages — `tournaments-main.js` / `stats-main.js` import the built-in
   registry directly, and custom entries have no `results/` folder.
@@ -306,9 +311,8 @@ dispatches in `src/main.js` by extension to a format **adapter**:
   everything else
   (jackpot propagation, splits naming, answerHtml) exactly as for PDFs.
 - **`.txt`** → `parseTextFile` → `parseTextPack`
-  (`parser/text-pack.js`). This is the **authored format** — the one the
-  "Format pack" modal's LLM prompt (`assets/text-pack-llm-prompt.txt`)
-  emits — so its adapter is strict: it classifies every line and reports
+  (`parser/text-pack.js`). This is the **authored format**, so its
+  adapter is strict: it classifies every line and reports
   precise, line-numbered issues (`txt-question-without-answer`,
   `txt-orphan-answer`, `txt-number-regression`,
   `txt-suspected-category`). `assets/sample_txt_pack.txt` must parse
@@ -343,9 +347,7 @@ Issues live in `state.parseIssues` (persisted inside
 `consensus-state-v1`) and surface in three places:
 
 1. **Setup screen**: `ui/parse-report.js` renders the expandable
-   "Suspected parsing issues" panel under `#pdf-status`; when
-   `shouldNudgeFormatPack()` (any error, or 3+ warnings) it also shows a
-   pointer to the Format-pack flow.
+   "Suspected parsing issues" panel under `#pdf-status`.
 2. **In-game**: sidebar slot buttons get a ⚠ flag
    (`issueSlotSet(state.parseIssues)`) and `#q-parse-warning` in the
    question panel explains the current slot's issues.

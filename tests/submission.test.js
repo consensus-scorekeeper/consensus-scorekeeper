@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseResultsCsv } from '../src/util/parse-results-csv.js';
+import { TOURNAMENTS } from '../src/ui/roster-presets.js';
 import {
   splitCsvBundle,
   gameIdentityKey,
@@ -214,16 +215,16 @@ describe('insertTournamentEntry', () => {
     // Execute the patched module source to prove it's still valid JS.
     // (The module has no imports; stripping `export ` keeps declarations.)
     const mod = new Function(
-      patched.replace(/^export /gm, '') + '\nreturn { TOURNAMENTS, DEFAULT_TOURNAMENT };'
+      patched.replace(/^export /gm, '') + '\nreturn { TOURNAMENTS };'
     )();
 
     const added = mod.TOURNAMENTS.find((t) => t.slug === 'injection-test-26');
     expect(added).toBeTruthy();
     expect(added.name).toBe('Injection "Test" <\'26> ${oops}');
     expect(added.rosters).toEqual([{ name: 'Team </script>', players: ['P1'] }]);
-    // Appending must not disturb existing entries or the default.
-    expect(mod.TOURNAMENTS[0].slug).toBe(mod.DEFAULT_TOURNAMENT.slug);
-    expect(mod.TOURNAMENTS.length).toBeGreaterThan(1);
+    // Appending must not disturb existing entries.
+    expect(mod.TOURNAMENTS[0].slug).toBe(TOURNAMENTS[0].slug);
+    expect(mod.TOURNAMENTS.length).toBe(TOURNAMENTS.length + 1);
   });
 
   it('throws when the source has no TOURNAMENTS array', () => {

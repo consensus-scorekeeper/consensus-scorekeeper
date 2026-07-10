@@ -1,8 +1,7 @@
-// Strict adapter for the plain-text pack format (the one authored format —
-// the "Format pack" modal's LLM prompt emits it). Classifies each raw line,
-// builds a RichDoc for the universal parser, and reports format problems
-// with exact line numbers so authors can fix their pack instead of
-// guessing why a question vanished.
+// Strict adapter for the plain-text pack format (the one authored format).
+// Classifies each raw line, builds a RichDoc for the universal parser, and
+// reports format problems with exact line numbers so authors can fix their
+// pack instead of guessing why a question vanished.
 //
 // Text format:
 //   Category Name             <- short line; first non-Q/A line after an answer

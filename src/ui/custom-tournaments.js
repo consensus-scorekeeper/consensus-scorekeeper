@@ -1,8 +1,8 @@
-// User-created tournaments-with-rosters, persisted in localStorage and
-// merged with the built-in TOURNAMENTS registry at read time. Only the
-// scorekeeper's preset picker sees the merged list — the public stats hub
-// and per-tournament stats pages import the built-in registry directly and
-// never show custom entries (they have no results/ folder to publish).
+// User-created tournaments-with-rosters, persisted in localStorage. These
+// are the only tournaments the scorekeeper's Tournament Mode picker shows —
+// the built-in TOURNAMENTS registry exists for the public stats hub and
+// per-tournament stats pages, which import it directly and never show
+// custom entries (they have no results/ folder to publish).
 //
 // Stored shape mirrors a registry entry:
 //   [{ name, slug, rosters: [{ name, players: [string] }] }]
@@ -88,10 +88,6 @@ export function generateSlug(name) {
   }
 }
 
-export function getAllTournaments() {
-  return [...TOURNAMENTS, ...loadCustomTournaments()];
-}
-
-export function getAnyTournamentBySlug(slug) {
-  return getAllTournaments().find((t) => t.slug === slug) || null;
+export function getCustomTournamentBySlug(slug) {
+  return loadCustomTournaments().find((t) => t.slug === slug) || null;
 }

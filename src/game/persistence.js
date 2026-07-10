@@ -10,9 +10,9 @@ import { state } from '../state.js';
 export const STORAGE_KEY = 'consensus-state-v1';
 export const PDF_STORAGE_KEY = 'consensus-pdf-v1';
 
-// Whether the game screen is currently shown. Used by saveState so a refresh
-// can restore the user back to the same screen. Reads DOM directly because
-// state doesn't carry a "currentScreen" field; Phase 3+ may move this.
+// Whether the game screen is currently shown. Gates the global keybinds
+// (ui/keybinds.js) so scoring keys are inert on the setup screen. Reads DOM
+// directly because state doesn't carry a "currentScreen" field.
 export function isGameVisible() {
   const el = document.getElementById('game');
   if (!el) return false;
@@ -37,7 +37,6 @@ export function saveState() {
       packName: state.packName,
       parseIssues: state.parseIssues,
       packDoc: state.packDoc,
-      gameActive: isGameVisible(),
       inlinePdfHidden: state.inlinePdfHidden,
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));

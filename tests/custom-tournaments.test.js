@@ -1,4 +1,4 @@
-// Storage + merged-registry tests for user-created tournaments.
+// Storage tests for user-created tournaments.
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
@@ -7,10 +7,9 @@ import {
   saveCustomTournament,
   deleteCustomTournament,
   generateSlug,
-  getAllTournaments,
-  getAnyTournamentBySlug,
+  getCustomTournamentBySlug,
 } from '../src/ui/custom-tournaments.js';
-import { TOURNAMENTS, DEFAULT_TOURNAMENT } from '../src/ui/roster-presets.js';
+import { TOURNAMENTS } from '../src/ui/roster-presets.js';
 
 const SAMPLE = {
   name: 'My Invitational 2027',
@@ -71,9 +70,10 @@ describe('corrupt storage', () => {
 });
 
 describe('generateSlug', () => {
-  it('suffixes on collision with a built-in slug', () => {
-    expect(generateSlug(DEFAULT_TOURNAMENT.name)).not.toBe(DEFAULT_TOURNAMENT.slug);
-    expect(generateSlug(DEFAULT_TOURNAMENT.name)).toBe(`${DEFAULT_TOURNAMENT.slug}-2`);
+  it('suffixes on collision with a built-in registry slug', () => {
+    const builtIn = TOURNAMENTS[0];
+    expect(generateSlug(builtIn.name)).not.toBe(builtIn.slug);
+    expect(generateSlug(builtIn.name)).toBe(`${builtIn.slug}-2`);
   });
 
   it('increments among custom entries', () => {
@@ -84,27 +84,11 @@ describe('generateSlug', () => {
   });
 });
 
-describe('merged registry', () => {
-  it('getAllTournaments lists built-ins first and every entry passes registry invariants', () => {
-    saveCustomTournament({ ...SAMPLE });
-    const all = getAllTournaments();
-    expect(all.slice(0, TOURNAMENTS.length)).toEqual(TOURNAMENTS);
-    for (const t of all) {
-      expect(t.name).toBeTruthy();
-      expect(t.slug).toMatch(/^[a-z0-9][a-z0-9-]*$/);
-      expect(Array.isArray(t.rosters)).toBe(true);
-      for (const r of t.rosters) {
-        expect(r.name).toBeTruthy();
-        expect(r.players.length).toBeGreaterThan(0);
-      }
-    }
-    expect(new Set(all.map((t) => t.slug)).size).toBe(all.length);
-  });
-
-  it('getAnyTournamentBySlug resolves built-ins and customs, null otherwise', () => {
+describe('getCustomTournamentBySlug', () => {
+  it('resolves custom entries only — never the built-in registry', () => {
     const saved = saveCustomTournament({ ...SAMPLE });
-    expect(getAnyTournamentBySlug(DEFAULT_TOURNAMENT.slug)).toBe(getAllTournaments()[0]);
-    expect(getAnyTournamentBySlug(saved.slug).name).toBe(SAMPLE.name);
-    expect(getAnyTournamentBySlug('nope')).toBeNull();
+    expect(getCustomTournamentBySlug(saved.slug).name).toBe(SAMPLE.name);
+    expect(getCustomTournamentBySlug(TOURNAMENTS[0].slug)).toBeNull();
+    expect(getCustomTournamentBySlug('nope')).toBeNull();
   });
 });

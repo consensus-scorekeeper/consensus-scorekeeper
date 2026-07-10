@@ -1,8 +1,19 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { state } from '../src/main.js';
-import { setTeamNameField, toggleRosterMode, getRosterMode } from '../src/ui/setup.js';
-import { playerSuggestionsFor, TOURNAMENTS, DEFAULT_TOURNAMENT } from '../src/ui/roster-presets.js';
+import { setTeamNameField, toggleRosterMode, getRosterMode, refreshTournamentPicker } from '../src/ui/setup.js';
+import { playerSuggestionsFor, TOURNAMENTS } from '../src/ui/roster-presets.js';
+import { CUSTOM_TOURNAMENTS_KEY, saveCustomTournament } from '../src/ui/custom-tournaments.js';
 import { resetState } from './helpers.js';
+
+// Tournament Mode only lists user-created tournaments, so the preset-mode
+// assertions below run against this one (saved fresh before each test).
+const TEST_TOURNAMENT = {
+  name: 'Preset Test Cup',
+  rosters: [
+    { name: 'Wookiee', players: ['Danny Han', 'Denis Liu', 'Ethan Bosita'] },
+    { name: 'Sarlacc', players: ['Michał Gerasimiuk', 'David Lingan'] },
+  ],
+};
 
 // Toggle into a known mode before each test. setupSetupScreen ran at main.js
 // import time using whatever localStorage held; force preset mode here so
@@ -15,6 +26,9 @@ function ensurePresetMode() {
 
 beforeEach(() => {
   resetState();
+  localStorage.removeItem(CUSTOM_TOURNAMENTS_KEY);
+  saveCustomTournament({ ...TEST_TOURNAMENT });
+  refreshTournamentPicker();
   ensurePresetMode();
 });
 
@@ -44,14 +58,13 @@ describe('TOURNAMENTS registry', () => {
 });
 
 describe('team-name <select> presets', () => {
-  it('is populated with every roster of the default tournament plus a placeholder', () => {
+  it('is populated with every roster of the selected tournament plus a placeholder', () => {
     const sel = document.getElementById('team-a-name');
-    // setupSetupScreen() ran at main.js import time. First option is the
-    // "— Pick a team —" placeholder; remaining options correspond 1:1 with
-    // the rosters of whichever tournament is currently selected (default).
+    // First option is the "— Pick a team —" placeholder; remaining options
+    // correspond 1:1 with the rosters of the selected custom tournament.
     const values = Array.from(sel.options).map((o) => o.value);
     expect(values[0]).toBe('');
-    expect(values.slice(1)).toEqual(DEFAULT_TOURNAMENT.rosters.map((p) => p.name));
+    expect(values.slice(1)).toEqual(TEST_TOURNAMENT.rosters.map((p) => p.name));
   });
 
   it('selecting a preset auto-populates name + players (change event)', () => {
@@ -75,10 +88,8 @@ describe('team-name <select> presets', () => {
     expect(state.teamB.players).toEqual([]);
   });
 
-  it('Michał Gerasimiuk is on the Sarlacc roster and in the autocomplete list', () => {
-    const sarlacc = DEFAULT_TOURNAMENT.rosters.find((p) => p.name === 'Sarlacc');
-    expect(sarlacc.players).toContain('Michał Gerasimiuk');
-    expect(playerSuggestionsFor(DEFAULT_TOURNAMENT)).toContain('Michał Gerasimiuk');
+  it('accented player names survive into the autocomplete list', () => {
+    expect(playerSuggestionsFor(TEST_TOURNAMENT)).toContain('Michał Gerasimiuk');
     const dl = document.getElementById('player-suggestions');
     const values = Array.from(dl.querySelectorAll('option')).map((o) => o.value);
     expect(values).toContain('Michał Gerasimiuk');

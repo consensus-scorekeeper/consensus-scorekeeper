@@ -11,26 +11,6 @@
 
 <!-- ==================== SETUP SCREEN ==================== -->
 <div id="setup">
-  <!-- Roster-mode control. OFF (default) = free-text team names. ON =
-       preset rosters; a tournament dropdown appears and the team-name
-       fields become <select>s populated from that tournament's rosters.
-       setup.js fills the dropdown from TOURNAMENTS. -->
-  <div class="roster-mode-control">
-    <span class="roster-mode-label" id="roster-mode-label">Tournament rosters</span>
-    <button type="button" class="roster-mode-switch" id="roster-mode-toggle"
-            data-action="toggle-roster-mode"
-            aria-pressed="false"
-            title="Turn on to load a tournament's preset rosters">
-      <span class="roster-mode-switch-track"><span class="roster-mode-switch-thumb"></span></span>
-      <span class="roster-mode-switch-state" id="roster-mode-switch-state">OFF</span>
-    </button>
-    <span class="roster-tournament-picker" id="roster-tournament-picker" hidden>
-      <label for="roster-tournament-select">Rosters from</label>
-      <select id="roster-tournament-select"></select>
-      <button type="button" class="btn roster-manage-btn" data-action="open-roster-manager"
-              title="Create, edit, or upload your own tournament rosters">Manage</button>
-    </span>
-  </div>
   <h1>Consensus Scorekeeper</h1>
 
   <div class="setup-section">
@@ -47,11 +27,6 @@
     <details class="parse-report" id="parse-report" style="display:none">
       <summary id="parse-report-summary"></summary>
       <ul class="parse-report-list" id="parse-report-list"></ul>
-      <div class="parse-report-nudge" id="parse-report-nudge" style="display:none">
-        This pack parsed roughly. For a clean, reviewable version, paste its raw text into
-        <button type="button" class="browse-toggle" data-action="open-format-pack">Format pack</button>
-        — an LLM reformats it into the scorekeeper's native format.
-      </div>
     </details>
     <button type="button" class="browse-toggle" id="browse-toggle">Or browse packs from consensustrivia.com &amp; gradwritetrivia.org</button>
     <div class="pack-browser" id="pack-browser">
@@ -64,7 +39,30 @@
   </div>
 
   <div class="setup-section">
-    <h2>Team Rosters</h2>
+    <!-- Tournament Mode control. OFF (default) = free-text team names. ON =
+         preset rosters; a tournament dropdown appears and the team-name
+         fields become <select>s populated from that tournament's rosters.
+         setup.js fills the dropdown from the user's own tournaments
+         (ui/custom-tournaments.js; created via Manage). -->
+    <div class="setup-section-header">
+      <h2>Team Rosters</h2>
+      <div class="roster-mode-control">
+        <span class="roster-mode-label" id="roster-mode-label">Tournament Mode</span>
+        <button type="button" class="roster-mode-switch" id="roster-mode-toggle"
+                data-action="toggle-roster-mode"
+                aria-pressed="false"
+                title="Turn on to load your tournament's preset rosters">
+          <span class="roster-mode-switch-track"><span class="roster-mode-switch-thumb"></span></span>
+          <span class="roster-mode-switch-state" id="roster-mode-switch-state">OFF</span>
+        </button>
+        <span class="roster-tournament-picker" id="roster-tournament-picker" hidden>
+          <label for="roster-tournament-select">Rosters from</label>
+          <select id="roster-tournament-select"></select>
+          <button type="button" class="btn roster-manage-btn" data-action="open-roster-manager"
+                  title="Create, edit, or upload your own tournament rosters">Manage</button>
+        </span>
+      </div>
+    </div>
     <div class="team-setup">
       <div class="team-box">
         <label for="team-a-name">Team A</label>
@@ -88,12 +86,20 @@
     <datalist id="player-suggestions"></datalist>
   </div>
 
-  <button class="btn btn-start" id="start-btn" data-action="start-game">Start Game</button>
+  <!-- Session actions. A page refresh always lands here (never straight
+       into the game screen); Resume Game and Clear saved game appear only
+       when there is a saved session to act on (see updateSessionButtons
+       in main.js). -->
+  <div class="session-actions">
+    <button class="btn btn-start" id="start-btn" data-action="start-game">Start Game</button>
+    <button class="btn btn-resume" id="resume-btn" data-action="resume-game" style="display:none"
+            title="Return to the game in progress">Resume Game</button>
+    <button type="button" class="btn btn-clear-save" id="clear-save-btn" data-action="clear-and-reload" style="display:none"
+            title="Delete the saved game and pack from this browser">Clear saved game</button>
+  </div>
   <div style="text-align:center; margin-top: 12px;">
     <button type="button" class="browse-toggle" data-action="start-tutorial" title="Boot a sandbox game with preset rosters and a sample pack so you can try the controls">Tutorial</button>
     <a class="browse-toggle stats-link" href="tournaments/" title="Browse stats for every tournament hosted on this site">Tournament Stats →</a>
-    <button type="button" class="browse-toggle" data-action="open-format-pack" title="Convert your own raw questions into a scorekeeper-ready pack via an LLM">Format pack</button>
-    <button type="button" class="browse-toggle" data-action="clear-and-reload">Clear saved game</button>
   </div>
   <p class="site-footer">
     This scorekeeper is open source on
@@ -101,35 +107,6 @@
     Found a bug or have an idea?
     <a href="https://github.com/consensus-scorekeeper/consensus-scorekeeper.github.io/issues" target="_blank" rel="noopener">Open an issue</a>.
   </p>
-</div>
-
-<!-- ==================== FORMAT PACK MODAL ==================== -->
-<div class="format-modal" id="format-modal" role="dialog" aria-modal="true" aria-labelledby="format-modal-title">
-  <div class="format-modal-card">
-    <button class="format-modal-close" data-action="close-format-pack" title="Close" aria-label="Close">&times;</button>
-    <h2 id="format-modal-title">Format your own pack</h2>
-    <p class="format-modal-help">
-      Paste raw questions in <strong>Step 1</strong> and click <em>Copy LLM prompt</em>. Send that to
-      Claude / ChatGPT / etc. — it will return a reformatted pack. Paste the LLM's output into
-      <strong>Step 2</strong> and click <em>Load pack</em>.
-    </p>
-
-    <label class="format-modal-label" for="format-raw">Step 1 — Raw questions</label>
-    <textarea id="format-raw" class="format-modal-textarea" rows="8"
-              placeholder="Paste raw quiz pack (any format) here..."></textarea>
-    <div class="format-modal-actions">
-      <button type="button" class="btn" data-action="copy-format-prompt">Copy LLM prompt</button>
-      <span class="format-modal-status" id="format-copy-status"></span>
-    </div>
-
-    <label class="format-modal-label" for="format-output">Step 2 — LLM's formatted output</label>
-    <textarea id="format-output" class="format-modal-textarea" rows="8"
-              placeholder="Paste the LLM's reformatted output here..."></textarea>
-    <div class="format-modal-actions">
-      <button type="button" class="btn btn-start" data-action="load-format-pack">Load pack</button>
-      <span class="format-modal-status" id="format-load-status"></span>
-    </div>
-  </div>
 </div>
 
 <!-- ==================== ROSTER MANAGER MODAL ==================== -->

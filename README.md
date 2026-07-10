@@ -8,9 +8,11 @@ Scorekeeper and stats viewer for [Consensus](https://consensustrivia.com/) trivi
 
 The repo has four entry points.
 
-`index.html` is the scorekeeper. You upload a packet — `.pdf`, a `.zip` of PDFs, a `.docx`, or a plain-text `.txt` — or pick one from the in-app browser of consensustrivia.com, set up rosters, and run the game. PDF packs get an inline PDF viewer for cross-checking; the text-derived formats (`.docx`/`.txt`) are text-only (no viewer). A "Format pack" button on the setup screen helps you convert arbitrary raw questions into the `.txt` format by copying a prefilled LLM prompt to your clipboard. Most of the live scoring is keyboard-driven. "Export CSV" at the end writes one row per player. There's also a Pop Out button that opens a dark, presentation-style scoreboard in a separate window for projecting to players or spectators.
+`index.html` is the scorekeeper. You upload a packet — `.pdf`, a `.zip` of PDFs, a `.docx`, or a plain-text `.txt` — or pick one from the in-app browser of consensustrivia.com, set up rosters, and run the game. PDF packs get an inline PDF viewer for cross-checking; the text-derived formats (`.docx`/`.txt`) are text-only (no viewer). Most of the live scoring is keyboard-driven. "Export CSV" at the end writes one row per player. There's also a Pop Out button that opens a dark, presentation-style scoreboard in a separate window for projecting to players or spectators.
 
-![Setup screen with "Tournament rosters" switched on. Team A has the Wookiee roster loaded; Team B's dropdown still says "Pick a team".](docs/screenshots/scorekeeper-setup.png)
+Progress is saved in the browser, and a refresh always lands back on the setup screen: **Resume Game** returns to the game in progress, **Start Game** warns before discarding one, and **Clear saved game** wipes the saved session.
+
+![Setup screen with Tournament Mode switched on. Team A has a preset roster loaded; Team B's dropdown still says "Pick a team".](docs/screenshots/scorekeeper-setup.png)
 
 ![Pop-out scoreboard window: dark background with both team names and large scores side-by-side, the current question number underneath, and the category line below that.](docs/screenshots/scorekeeper-popout.png)
 
@@ -46,11 +48,11 @@ Maintainers can also skip the form and drop CSVs straight into `tournaments/<slu
 
 New tournaments don't need a code change: submitting results under a fresh slug creates the registry entry and stats page automatically in the same pull request. To add one by hand instead, append an entry to `TOURNAMENTS` in `src/ui/roster-presets.js`, then copy `tournaments/stanford-consensus-2026/index.html` into a new folder named after the slug and change the one `<meta name="tournament-slug">` tag inside. Drop CSVs into the new `results/` folder and the hub starts showing it.
 
-## Roster modes
+## Tournament Mode
 
-There's a "Tournament rosters" toggle in the top-right of the setup screen. When it's off (the default), you type team names freely. When it's on, the team-name fields become dropdowns of preset rosters from the chosen tournament; a second dropdown next to the toggle lets you pick which tournament's rosters to load.
+There's a "Tournament Mode" toggle in the Team Rosters section of the setup screen. When it's off (the default), you type team names freely. When it's on, the team-name fields become dropdowns of preset rosters from the chosen tournament; a second dropdown next to the toggle lets you pick which of your tournaments' rosters to load, and a Manage button creates, edits, imports, and exports them (they're saved in the browser).
 
-In preset mode the add-player autocomplete lists every player from every tournament (mostly to keep subs' names from being misspelled). In custom mode the autocomplete is empty — typing your own roster shouldn't get nudged toward names from tournaments you aren't using.
+In Tournament Mode the add-player autocomplete lists the selected tournament's players (mostly to keep subs' names from being misspelled). With the toggle off the autocomplete is empty — typing your own roster shouldn't get nudged toward names from tournaments you aren't using.
 
 ## Tutorial
 

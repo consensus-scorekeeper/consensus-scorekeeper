@@ -2,7 +2,7 @@
 // emit issue records at the point of failure; analyzeQuestions() adds
 // whole-pack checks after a parse. Issues are advisory — a pack with issues
 // still loads and plays — but they drive the parse report on the setup
-// screen, the per-slot warning flags in-game, and the "Format pack" nudge.
+// screen and the per-slot warning flags in-game.
 //
 // Issue shape:
 //   { severity: 'error'|'warn', code, message,
@@ -104,12 +104,4 @@ export function summarizeIssues(issues) {
     else warns++;
   }
   return { errors, warns };
-}
-
-// When a parse looks rough enough that hand-fixing beats playing through it,
-// the report panel suggests the Format-pack flow (LLM reformat to the
-// canonical .txt format).
-export function shouldNudgeFormatPack(issues) {
-  const { errors, warns } = summarizeIssues(issues);
-  return errors > 0 || warns >= 3;
 }

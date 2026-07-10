@@ -1,6 +1,6 @@
-// Integration tests for custom tournaments in the setup screen: the merged
-// tournament picker, delete/edit fallbacks, and the roster-manager modal
-// (wired through main.js's real data-action dispatcher).
+// Integration tests for custom tournaments in the setup screen: the
+// Tournament Mode picker, delete/edit fallbacks, and the roster-manager
+// modal (wired through main.js's real data-action dispatcher).
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { state } from '../src/main.js';
@@ -11,7 +11,6 @@ import {
   saveCustomTournament,
   deleteCustomTournament,
 } from '../src/ui/custom-tournaments.js';
-import { DEFAULT_TOURNAMENT } from '../src/ui/roster-presets.js';
 import { resetState } from './helpers.js';
 
 function ensurePresetMode() {
@@ -40,15 +39,25 @@ beforeEach(() => {
   refreshTournamentPicker();
 });
 
-describe('merged tournament picker', () => {
-  it('shows a saved custom tournament under "My tournaments" and applies its rosters', () => {
+describe('Tournament Mode picker (customs only)', () => {
+  it('starts empty and disabled until a tournament exists', () => {
+    const sel = pickerSel();
+    expect(sel.disabled).toBe(true);
+    expect(sel.options).toHaveLength(1);
+    expect(sel.options[0].textContent).toMatch(/Manage/);
+    // The team-name select carries only its placeholder.
+    const teamSel = document.getElementById('team-a-name');
+    expect(Array.from(teamSel.options).map((o) => o.value)).toEqual(['']);
+  });
+
+  it('lists a saved tournament (and never the built-in registry) and applies its rosters', () => {
     const saved = saveCustomTournament({ ...CUSTOM });
     refreshTournamentPicker();
 
     const sel = pickerSel();
-    expect(Array.from(sel.options).map((o) => o.value)).toContain(saved.slug);
-    expect(sel.querySelector('optgroup[label="My tournaments"]')).toBeTruthy();
-    expect(sel.querySelector('optgroup[label="Built-in"]')).toBeTruthy();
+    expect(sel.disabled).toBe(false);
+    expect(Array.from(sel.options).map((o) => o.value)).toEqual([saved.slug]);
+    expect(sel.querySelector('optgroup')).toBeNull();
 
     pickTournament(saved.slug);
     const teamSel = document.getElementById('team-a-name');
@@ -61,37 +70,56 @@ describe('merged tournament picker', () => {
   });
 
   it('scopes the add-player autocomplete to the selected tournament', () => {
-    const saved = saveCustomTournament({ ...CUSTOM });
+    saveCustomTournament({ ...CUSTOM });
+    const other = saveCustomTournament({
+      name: 'Other Cup',
+      rosters: [{ name: 'Theta', players: ['R One'] }],
+    });
     refreshTournamentPicker();
+
     const dl = document.getElementById('player-suggestions');
-
-    // Default (built-in) tournament selected: its players, not the custom ones.
+    pickTournament(other.slug);
+    expect(dl.innerHTML).toContain('R One');
     expect(dl.innerHTML).not.toContain('P One');
-    const builtInPlayer = DEFAULT_TOURNAMENT.rosters[0].players[0];
-    expect(dl.innerHTML).toContain(builtInPlayer);
 
-    // Selecting the custom tournament flips the suggestion pool.
-    pickTournament(saved.slug);
+    pickTournament(loadCustomTournaments()[0].slug);
     expect(dl.innerHTML).toContain('P One');
-    expect(dl.innerHTML).not.toContain(builtInPlayer);
+    expect(dl.innerHTML).not.toContain('R One');
   });
 
-  it('deleting the selected custom tournament falls back to the default and clears teams', () => {
+  it('deleting the selected tournament falls back to the first remaining one and clears teams', () => {
+    const first = saveCustomTournament({ ...CUSTOM });
+    const second = saveCustomTournament({
+      name: 'Other Cup',
+      rosters: [{ name: 'Theta', players: ['R One'] }],
+    });
+    refreshTournamentPicker();
+    pickTournament(second.slug);
+    const teamSel = document.getElementById('team-a-name');
+    teamSel.value = 'Theta';
+    teamSel.dispatchEvent(new Event('change', { bubbles: true }));
+
+    deleteCustomTournament(second.slug);
+    refreshTournamentPicker();
+
+    expect(pickerSel().value).toBe(first.slug);
+    expect(state.teamA.name).toBe('');
+    expect(state.teamA.players).toEqual([]);
+    expect(Array.from(document.getElementById('team-a-name').options).map((o) => o.value))
+      .not.toContain('Theta');
+  });
+
+  it('deleting the last tournament empties the picker and the team dropdowns', () => {
     const saved = saveCustomTournament({ ...CUSTOM });
     refreshTournamentPicker();
     pickTournament(saved.slug);
-    const teamSel = document.getElementById('team-a-name');
-    teamSel.value = 'Zeta';
-    teamSel.dispatchEvent(new Event('change', { bubbles: true }));
 
     deleteCustomTournament(saved.slug);
     refreshTournamentPicker();
 
-    expect(pickerSel().value).toBe(DEFAULT_TOURNAMENT.slug);
-    expect(state.teamA.name).toBe('');
+    expect(pickerSel().disabled).toBe(true);
+    expect(Array.from(document.getElementById('team-a-name').options).map((o) => o.value)).toEqual(['']);
     expect(state.teamA.players).toEqual([]);
-    expect(Array.from(document.getElementById('team-a-name').options).map((o) => o.value))
-      .not.toContain('Zeta');
   });
 
   it('editing the selected tournament repopulates the team dropdowns', () => {
