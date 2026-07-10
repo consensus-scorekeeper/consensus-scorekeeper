@@ -1,27 +1,24 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { parseDocxBuffer, parseDocxParagraphs, inferStreakSlotCount } from '../src/parser/docx-questions.js';
+import { parseDocxBuffer, parseDocxParagraphs, inferStreakCap } from '../src/parser/docx-questions.js';
 
-describe('inferStreakSlotCount', () => {
-  it('uses prompt cap when present, ceil(cap/2)', () => {
-    expect(inferStreakSlotCount('name up to all six of the highest-rated…', 6)).toBe(3);
-    expect(inferStreakSlotCount('Give the nicknames of up to all six…', 6)).toBe(3);
-    expect(inferStreakSlotCount('Name up to all five colors on the Olympic flag.', 5)).toBe(3);
-    expect(inferStreakSlotCount('Name up to all four…', 4)).toBe(2);
+describe('inferStreakCap', () => {
+  it('uses the prompt cap when present', () => {
+    expect(inferStreakCap('name up to all six of the highest-rated…', 6)).toBe(6);
+    expect(inferStreakCap('Give the nicknames of up to all six…', 6)).toBe(6);
+    expect(inferStreakCap('Name up to all five colors on the Olympic flag.', 5)).toBe(5);
+    expect(inferStreakCap('Name up to all four…', 4)).toBe(4);
   });
   it('uses prompt cap even when more answers are listed', () => {
     // Writer listed 11 acceptable answers but the prompt caps at five.
-    expect(inferStreakSlotCount('Name up to all five US presidents…', 11)).toBe(3);
+    expect(inferStreakCap('Name up to all five US presidents…', 11)).toBe(5);
   });
   it('handles digit caps', () => {
-    expect(inferStreakSlotCount('Name up to 8 things', 8)).toBe(4);
+    expect(inferStreakCap('Name up to 8 things', 8)).toBe(8);
   });
-  it('falls back to ceil(answers/2) when no cap pattern matches', () => {
-    expect(inferStreakSlotCount('List as many as you can.', 6)).toBe(3);
-    expect(inferStreakSlotCount('', 7)).toBe(4);
-  });
-  it('never returns less than 1', () => {
-    expect(inferStreakSlotCount('', 0)).toBe(1);
+  it('falls back to the answer count when no cap pattern matches', () => {
+    expect(inferStreakCap('List as many as you can.', 6)).toBe(6);
+    expect(inferStreakCap('Name up to every Pixar film with a name in its title.', 7)).toBe(7);
   });
 });
 
@@ -109,17 +106,45 @@ describe('parseDocxParagraphs — streak span from prompt cap', () => {
 });
 
 describe('parseDocxParagraphs — streak without a stated cap', () => {
-  const { issues } = parseDocxParagraphs([
+  const { questions, issues } = parseDocxParagraphs([
     para('Streak', true),
-    para('List as many prime numbers as you can.'),
+    para('Name up to every prime number below ten.'),
     para('A: 2'),
     para('A: 3'),
+    para('A: 5'),
+    para('A: 7'),
     para('Set of 1: End', true),
     para('Done? ANSWER: yes'),
   ]);
-  it('flags the guessed slot span', () => {
-    expect(issues.some(i => i.code === 'docx-streak-cap-fallback')).toBe(true);
+  it('spans slots from the answer count without warning (capless prompts are standard)', () => {
+    const streak = questions.find(q => q.streakRange);
+    expect(streak.streakRange).toEqual({ start: 1, end: 2 });
+    expect(issues).toEqual([]);
   });
+});
+
+describe('parseDocxParagraphs — two odd-capped streaks share a slot', () => {
+  const streakBlock = (prompt, answers) => [
+    para('Streak', true),
+    para(prompt),
+    ...answers.map(a => para(`A: ${a}`)),
+  ];
+  const { questions, issues } = parseDocxParagraphs([
+    ...streakBlock('Name up to all five colors on the Olympic flag.',
+      ['Blue', 'Yellow', 'Black', 'Green', 'Red']),
+    ...streakBlock('Name up to all five Great Lakes.',
+      ['Superior', 'Michigan', 'Huron', 'Erie', 'Ontario']),
+    para('Set of 1: End', true),
+    para('Done? ANSWER: yes'),
+  ]);
+  const streaks = questions.filter(q => q.streakRange);
+
+  it('allocates 5 slots total (5 + 5 half-point answers), not ceil-each 6', () => {
+    expect(streaks[0].streakRange).toEqual({ start: 1, end: 3 });
+    expect(streaks[1].streakRange).toEqual({ start: 4, end: 5 });
+    expect(questions.find(q => q.category === 'Set of 1: End').num).toBe(6);
+  });
+  it('reports no issues', () => expect(issues).toEqual([]));
 });
 
 describe('parseDocxParagraphs — splits', () => {

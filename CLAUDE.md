@@ -71,8 +71,9 @@ src/
                           bold = second-most-used font)
     docx-text.js        ← extractDocxParagraphs (zip → word/document.xml → runs[])
     docx-questions.js   ← docx adapter: transpiles paragraphs into canonical numbered
-                          lines (sequential nums; streak spans = number gaps via
-                          inferStreakSlotCount) and runs them through parseQuestions
+                          lines (sequential nums; streak spans = number gaps from the
+                          pack's cumulative streak caps via inferStreakCap) and runs
+                          them through parseQuestions
     text-pack.js        ← txt adapter: strict line classifier for the authored format,
                           emits line-numbered txt-* issues, feeds parseQuestions
   game/
@@ -284,10 +285,14 @@ dispatches in `src/main.js` by extension to a format **adapter**:
   (`parser/docx-questions.js`). Docx packets have no question numbers,
   so the adapter *transpiles* paragraphs into canonical numbered lines:
   sequential numbers, `A:` answer lines, bold category headers, and
-  streak spans encoded as number gaps using
-  `inferStreakSlotCount(prompt, answerCount)` (prompt cap "up to all N"
-  beats raw answer count; slots = `max(1, ceil(cap / 2))` since streak
-  answers are worth half points). The core then handles everything else
+  streak spans encoded as number gaps. Each streak's cap comes from
+  `inferStreakCap(prompt, answerCount)` — a numeric prompt cap ("up to
+  all N") beats the raw answer count; capless prompts ("up to every…")
+  are standard and just use the answer count. Streak answers are worth
+  half points, so slots are allocated from the pack's *cumulative* cap
+  total (`ceil(cum / 2)` minus slots already allocated) — two odd caps
+  share a slot instead of each rounding up. The core then handles
+  everything else
   (jackpot propagation, splits naming, answerHtml) exactly as for PDFs.
 - **`.txt`** → `parseTextFile` → `parseTextPack`
   (`parser/text-pack.js`). This is the **authored format** — the one the
@@ -522,7 +527,7 @@ transparent to tests. Notable test files:
                                      deliberately with `node scripts/generate-golden.mjs`
 - `parse-questions.test.js`        — synthetic RichDoc input → parsed questions
 - `diagnostics.test.js`            — analyzeQuestions checks, core issue emission, helpers
-- `docx-questions.test.js`         — inferStreakSlotCount + synthetic-paragraph transpiler
+- `docx-questions.test.js`         — inferStreakCap + streak slot allocation + synthetic-paragraph transpiler
                                      cases + a file-gated suite over a real local packet
 - `parse-report.test.js`           — the suspected-parsing-issues panel DOM
 - `state-mutations.test.js`        — reducer correctness

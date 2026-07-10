@@ -32,26 +32,28 @@ const ANSWER_SPLIT_GLOBAL_RE = /ANSWER\s*[:;]\s*/gi;
 const ANSWER_START_RE = /^\s*ANSWER\s*[:;]/i;
 const A_PREFIX_RE = /^A\s*[:;]\s*/i;
 
-// Streak prompts usually say "name up to all SIX" / "up to five" / "name 8"
-// etc. We use that cap (not the raw answer count) to decide how many slots
-// the streak occupies — writers sometimes list more accepted answers than
-// the moderator is allowed to count. With each streak answer worth half
-// points, slot count = ceil(cap / 2).
+// A streak's cap is how many answers the moderator may count. Prompts that
+// state a numeric cap ("name up to all SIX" / "up to five" / "name 8") win
+// over the raw answer count — writers sometimes list more accepted answers
+// than count ("up to six of the ten largest…"). Prompts with no numeric cap
+// ("name up to every…") are equally standard; there the listed answers ARE
+// the cap. Each streak answer is worth half a point, so a pack's streaks
+// jointly occupy cap-total / 2 slots — see flushStreak for how odd caps
+// share a slot across streaks.
 const NUMBER_WORDS = {
   one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8,
   nine: 9, ten: 10, eleven: 11, twelve: 12,
 };
 const CAP_RE = /\b(?:up to(?:\s+all)?|name(?:\s+up\s+to)?|give(?:\s+up\s+to)?)\s+(?:all\s+)?(\d+|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\b/i;
 
-export function inferStreakSlotCount(prompt, answerCount) {
-  let cap = answerCount;
+export function inferStreakCap(prompt, answerCount) {
   const m = prompt && CAP_RE.exec(prompt);
   if (m) {
     const word = m[1].toLowerCase();
     const n = NUMBER_WORDS[word] != null ? NUMBER_WORDS[word] : parseInt(word, 10);
-    if (Number.isFinite(n) && n > 0) cap = n;
+    if (Number.isFinite(n) && n > 0) return n;
   }
-  return Math.max(1, Math.ceil(cap / 2));
+  return answerCount;
 }
 
 function runsPlain(runs) {
@@ -232,6 +234,7 @@ export function docxParagraphsToDoc(paragraphs) {
   let questionsInGroup = 0;       // since the current category / splits sub-title
   let streak = null;              // { prompt, answers: runs[] }
   let pendingStreakPrompt = null;
+  let streakCapHalves = 0;        // cumulative cap across the pack's streaks
   let jackpot = null;             // { parts: string[], answerRuns }
   let overflowWarned = false;
 
@@ -270,12 +273,20 @@ export function docxParagraphsToDoc(paragraphs) {
         'A Streak had a prompt but no "A:" answer lines — it was dropped.'));
       return;
     }
-    if (!CAP_RE.test(prompt || '')) {
-      adapterIssues.push(makeIssue('docx-streak-cap-fallback', 'warn',
-        `Streak prompt doesn't state a cap ("name up to N…") — its slot span was guessed from the ${answers.length} listed answers.`,
-        { slot: n + 1 }));
+    // Slots are allocated from the cumulative cap total, not per streak:
+    // streak answers are worth half a point, so two odd-capped streaks
+    // (5 + 5) fill 5 slots, not ceil-each's 6 — the first keeps its ceiling
+    // and the next streak absorbs the shared half.
+    const cap = inferStreakCap(prompt, answers.length);
+    const allocated = Math.ceil(streakCapHalves / 2);
+    streakCapHalves += cap;
+    let slots = Math.ceil(streakCapHalves / 2) - allocated;
+    if (slots < 1) {
+      // Every streak needs at least one slot; count the forced slot in the
+      // running total so it isn't double-spent by the next streak.
+      slots = 1;
+      streakCapHalves = (allocated + 1) * 2;
     }
-    const slots = inferStreakSlotCount(prompt, answers.length);
     const qNum = nextNum();
     emit(`${qNum}. ${clean(prompt || 'Streak')}`);
     for (const a of answers) emitAnswer(a);
