@@ -20,9 +20,10 @@
   </header>
 
   <section class="setup-section" id="tournament-stats-section">
-    <p class="ts-intro">
-      <a href="rules-slides.html">View rules briefing →</a>
-    </p>
+    <!-- The rules-briefing link is injected by stats-main.js, and only when
+         a rules-slides.html actually exists next to this page — this shell
+         is also the template the submission pipeline copies for new
+         tournaments, which usually have no deck. -->
     <span class="ts-status" id="ts-status"></span>
     <div id="ts-content"></div>
   </section>

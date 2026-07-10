@@ -3,8 +3,9 @@
 // under a fresh slug is also how a new tournament's stats page gets created,
 // so "create a tournament" is the same form with no slug prefilled.
 //
-// Used by the stats hub (tournaments-main.js) and every per-tournament stats
-// page (stats-main.js); must stay free of scorekeeper-only DOM assumptions.
+// submitResultsLink goes on every per-tournament stats page (stats-main.js);
+// createTournamentLink on the stats hub only (tournaments-main.js). Must stay
+// free of scorekeeper-only DOM assumptions.
 
 import { submitResultsUrl } from '../util/submit-results.js';
 

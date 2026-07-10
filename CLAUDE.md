@@ -50,8 +50,9 @@ src/
   main.js               ← scorekeeper entry: imports modules, wires DOM, loadState()
   stats-main.js         ← per-tournament-stats-page entry: reads slug from <meta>,
                           stamps title from TOURNAMENTS[slug], injects the
-                          submit-results + create-tournament links, loads
-                          results/manifest.json
+                          submit-results link + the rules-briefing link (HEAD-probes
+                          rules-slides.html — never hardcoded in the shell, which
+                          the submission pipeline copies), loads results/manifest.json
   tournaments-main.js   ← tournaments/index.html entry: hub list + search filter
                           + create-tournament link
   state.js              ← state singleton + reducers + subscribe()
@@ -115,8 +116,9 @@ src/
     tournament-stats.js ← setupTournamentStats: manifest fetch + view router
     submission-links.js ← DOM builders for the submit-results / create-tournament
                           links (both open the GitHub issue form via
-                          util/submit-results.js); used by stats-main.js and
-                          tournaments-main.js, so page-agnostic
+                          util/submit-results.js); submit-results on every
+                          per-tournament page (stats-main.js), create-tournament
+                          on the hub only (tournaments-main.js) — page-agnostic
     parse-report.js     ← renderParseReport: the "suspected parsing issues" panel under
                           the upload status (reads state.parseIssues)
   util/
@@ -377,7 +379,8 @@ runbook is only needed for tournaments added outside that flow:
    auto-manifest workflow regenerates `manifest.json` on push.
 4. Optionally add `tournaments/<slug>/rules-slides.html` if the
    tournament has a rules briefing — the per-tournament page links to it
-   automatically if present.
+   automatically if present (`stats-main.js` HEAD-probes for the file;
+   never hardcode the link in the page shell).
 
 The hub (`tournaments/index.html`) auto-discovers the new entry — it
 renders one card per TOURNAMENTS entry with the link derived from
@@ -463,9 +466,9 @@ per-tournament stats page renders a **Submit game results →** link
 pipeline-generated pages get it with no per-page HTML) that opens the
 form with that tournament's slug prefilled; the scorer pastes or attaches
 the CSV(s) from the scorekeeper's **Export CSV** button. The stats hub
-and each per-tournament page also render a **Create its stats page →**
-link — the same form with no slug prefilled — since submitting games
-under a fresh slug is how a new tournament gets created (see below).
+also renders a **Create its stats page →** link — the same form with no
+slug prefilled — since submitting games under a fresh slug is how a new
+tournament gets created (see below).
 (The submit button originally lived in the scorekeeper's controls bar and
 prefilled the CSV through the URL — it moved to the stats pages so
 submitting sits next to where results are published, and CSV-in-URL

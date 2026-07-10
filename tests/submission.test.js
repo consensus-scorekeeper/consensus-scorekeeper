@@ -233,6 +233,17 @@ describe('insertTournamentEntry', () => {
 });
 
 describe('retargetTournamentPage', () => {
+  it('the template page carries no hardcoded rules-briefing link', () => {
+    // Generated pages are copies of this shell; a baked-in link would point
+    // at a rules-slides.html the new tournament doesn't have. stats-main.js
+    // probes for the file and injects the link at runtime instead.
+    const html = fs.readFileSync(
+      path.join(repoRoot, 'tournaments', 'stanford-consensus-2026', 'index.html'),
+      'utf8'
+    );
+    expect(html).not.toMatch(/<a [^>]*href="rules-slides\.html"/);
+  });
+
   it('retargets the real template page to a new slug and name', () => {
     const html = fs.readFileSync(
       path.join(repoRoot, 'tournaments', 'stanford-consensus-2026', 'index.html'),
