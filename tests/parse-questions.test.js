@@ -112,6 +112,52 @@ describe('parseQuestions — captures category instructions', () => {
   });
 });
 
+describe('parseQuestions — captures a reveal note after an answer', () => {
+  const doc = buildDoc([
+    { text: 'Set of 2: Mystery', isBold: true },
+    { text: '60. What number was worn during Linsanity by Jeremy Lin?' },
+    { text: 'A: 17' },
+    { text: '61. What intercardinal direction lies 45 degrees from NNE and WNW?' },
+    { text: 'A: north-northwest' },
+    { text: '(The theme was Alfred Hitchcock films.)' },
+    { text: 'Set of 1: Next', isBold: true },
+    { text: '62. Done?' },
+    { text: 'A: yes' },
+  ]);
+  const { questions: qs } = parseQuestions(doc);
+
+  it('attaches the note to the question it follows', () => {
+    expect(qs.find(q => q.num === 61).categoryReveal).toBe('(The theme was Alfred Hitchcock films.)');
+  });
+  it('leaves other questions without a reveal', () => {
+    expect(qs.find(q => q.num === 60).categoryReveal).toBeNull();
+    expect(qs.find(q => q.num === 62).categoryReveal).toBeNull();
+  });
+  it('keeps the note out of the answer text', () => {
+    const q = qs.find(q => q.num === 61);
+    expect(q.answer).toBe('north-northwest');
+    expect(q.answerHtml).not.toContain('theme');
+  });
+  it('does not disturb the next category', () => {
+    expect(qs.find(q => q.num === 62).category).toBe('Set of 1: Next');
+  });
+});
+
+describe('parseQuestions — parenthesized line mid-question is not a reveal', () => {
+  const doc = buildDoc([
+    { text: 'Set of 1: Film', isBold: true },
+    { text: '10. Which film features the line' },
+    { text: '(quoted above)' },
+    { text: 'in its opening scene?' },
+    { text: 'A: Casablanca' },
+  ]);
+  const { questions: qs } = parseQuestions(doc);
+  it('keeps the parenthetical in the question text, no reveal', () => {
+    expect(qs[0].question).toContain('(quoted above)');
+    expect(qs[0].categoryReveal).toBeNull();
+  });
+});
+
 describe('parseQuestions — rejects mid-sentence "N." matches', () => {
   // Critical regression: in the parser comment, "secant of 5 pi over 3." inside
   // a question must NOT be matched as Q3. The fix is the isLineStart() check

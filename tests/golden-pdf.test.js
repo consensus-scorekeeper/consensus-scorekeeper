@@ -19,7 +19,7 @@ import { parsePdfFixture } from './helpers/pdf-fixture.mjs';
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const TEXT_FIELDS = [
   'num', 'question', 'answer', 'answerHtml',
-  'category', 'posInCategory', 'categoryInstructions', 'streakRange',
+  'category', 'posInCategory', 'categoryInstructions', 'categoryReveal', 'streakRange',
 ];
 
 const FIXTURES = [

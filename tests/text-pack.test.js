@@ -106,6 +106,32 @@ A: Karakoram
   });
 });
 
+describe('parseTextPack — reveal note after an answer', () => {
+  const { questions: qs, issues } = parseTextPack(
+    `Set of 2: Mystery
+1. What number was worn during Linsanity by Jeremy Lin?
+A: 17
+2. What direction lies between NNE and WNW?
+A: north-northwest
+(The theme was Alfred Hitchcock films.)
+Set of 1: End
+3. Done?
+A: yes
+`
+  );
+
+  it('is not mistaken for a category title', () => {
+    expect(qs.find(q => q.num === 3).category).toBe('Set of 1: End');
+    expect(qs.map(q => q.category)).not.toContain('(The theme was Alfred Hitchcock films.)');
+  });
+  it('attaches the reveal to the question it follows, out of the answer', () => {
+    const q = qs.find(q => q.num === 2);
+    expect(q.categoryReveal).toBe('(The theme was Alfred Hitchcock films.)');
+    expect(q.answer).toBe('north-northwest');
+  });
+  it('reports no issues', () => expect(issues).toEqual([]));
+});
+
 describe('parseTextPack — instructions captured per category', () => {
   const { questions: qs } = parseTextPack(
     `Set of 3: Before and After

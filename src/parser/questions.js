@@ -113,12 +113,15 @@ export function parseQuestions(doc) {
   // A bold line that isn't a question, structural marker, answer/prompt line,
   // or bare number is a category title.
   const categoryMap = {};
+  const revealByNum = {};         // question num → parenthesized note following its answer
   let currentCategory = null;
   let currentInstructions = '';   // accumulated prose between a category title and its first question
   let captureInstructions = false; // toggled true after a bold category title; false on first qMatch
   let categoryQuestionCount = 0;
   let inSplit = false;
   let splitCount = 0;
+  let lastQNum = null;            // most recent question number seen
+  let afterAnswer = false;        // an answer line has appeared since that question
 
   for (const line of lines) {
     const text = line.text;
@@ -128,13 +131,17 @@ export function parseQuestions(doc) {
     const qMatch = text.match(/^(\d{1,3})\.(?:\s|$)/);
     if (qMatch) {
       const num = parseInt(qMatch[1]);
-      if (num >= 1 && num <= 100 && currentCategory) {
-        categoryQuestionCount++;
-        categoryMap[num] = {
-          category: currentCategory,
-          posInCategory: categoryQuestionCount,
-          categoryInstructions: currentInstructions || null,
-        };
+      if (num >= 1 && num <= 100) {
+        lastQNum = num;
+        afterAnswer = false;
+        if (currentCategory) {
+          categoryQuestionCount++;
+          categoryMap[num] = {
+            category: currentCategory,
+            posInCategory: categoryQuestionCount,
+            categoryInstructions: currentInstructions || null,
+          };
+        }
       }
       captureInstructions = false;
       continue;
@@ -142,7 +149,7 @@ export function parseQuestions(doc) {
     // Skip structural markers (END OF, QUARTER labels, etc.)
     if (STRUCTURAL_RE.test(text) || text.length < 2) continue;
     // Skip answer/accept/prompt/reject lines
-    if (/^(A:\s|\(accept|\(prompt|\(reject)/i.test(text)) continue;
+    if (/^(A:\s|\(accept|\(prompt|\(reject)/i.test(text)) { afterAnswer = true; continue; }
     // Skip quarter/half markers (page headers — always uppercase in real PDFs).
     if (/^(QUARTER|HALF)/.test(text)) continue;
     // Skip bare numbers
@@ -178,9 +185,15 @@ export function parseQuestions(doc) {
     // Non-bold prose line that survived all skips. If we just saw a category
     // title and haven't hit the first question yet, treat it as category
     // instructions for the moderator (e.g., "Set of 3: Before and After"
-    // explains the answer format before Q63). Otherwise ignore.
+    // explains the answer format before Q63). A fully-parenthesized line
+    // after a question's answer is a reveal note — e.g. a Mystery category's
+    // "(The theme was Alfred Hitchcock films.)" — kept for display with that
+    // question. Anything else is ignored.
     if (captureInstructions) {
       currentInstructions = (currentInstructions ? currentInstructions + ' ' : '') + text;
+    } else if (afterAnswer && lastQNum !== null && /^\(.+\)$/.test(text.trim())) {
+      const note = text.trim().replace(/\s+/g, ' ');
+      revealByNum[lastQNum] = revealByNum[lastQNum] ? `${revealByNum[lastQNum]} ${note}` : note;
     }
   }
 
@@ -240,12 +253,18 @@ export function parseQuestions(doc) {
     if (t.endsWith(title)) return t.substring(0, t.length - title.length).replace(/\s+$/, '');
     return text;
   }
-  // Remove trailing bleed (section words, the next category's title, writer
-  // tags) from an answer's text. The title must be tried on the *uncleaned*
-  // text first: cleanTrailing can eat part of a title it has a pattern for
-  // ("Linked Set of 5" loses " Set of 5"), leaving a fragment endsWith() can
-  // no longer see.
-  function cleanAnswerText(text, title) {
+  // Remove trailing bleed (section words, the next category's title, a
+  // reveal note, writer tags) from an answer's text. A reveal note came
+  // after the answer's last line, so everything from it onward — the note
+  // itself plus whatever headers follow it — is bleed; truncate there first.
+  // The title must be tried on the *uncleaned* text: cleanTrailing can eat
+  // part of a title it has a pattern for ("Linked Set of 5" loses
+  // " Set of 5"), leaving a fragment endsWith() can no longer see.
+  function cleanAnswerText(text, title, reveal = null) {
+    if (reveal) {
+      const idx = text.indexOf(reveal);
+      if (idx !== -1) text = text.substring(0, idx);
+    }
     const untagged = text.replace(TRAILING_WRITER_TAG_RE, '');
     const stripped = stripTrailingTitle(untagged, title);
     if (stripped !== untagged) return cleanTrailing(stripped);
@@ -259,6 +278,7 @@ export function parseQuestions(doc) {
     const segment = combined.substring(start.pos, endPos);
     const catInfo = categoryMap[start.num] || null;
     const nextTitle = nextCategoryTitle(i, catInfo);
+    const reveal = revealByNum[start.num] || null;
     // Look up source page + Y position from the rich segment that contains this
     // question's "N. " marker. Used to scroll the inline PDF to the question.
     let qPageNum = null, qYPos = null;
@@ -285,7 +305,7 @@ export function parseQuestions(doc) {
 
         // Also get plain answer for cleaning
         let answerPlain = combined.substring(ansStart, endPos).trim().replace(/\s+/g, ' ');
-        answerPlain = cleanAnswerText(answerPlain, nextTitle);
+        answerPlain = cleanAnswerText(answerPlain, nextTitle, reveal);
 
         // Check for multiple A: answers (common in streaks)
         const aMatches = [];
@@ -310,7 +330,7 @@ export function parseQuestions(doc) {
             const rich = extractRichRange(as2, aEnd, richSegments, posMap);
             const rawText = combined.substring(as2, aEnd).trim().replace(/\s+/g, ' ');
             const plainText = ai === aMatches.length - 1
-              ? cleanAnswerText(rawText, nextTitle)
+              ? cleanAnswerText(rawText, nextTitle, reveal)
               : cleanTrailing(rawText);
             // Trim rich HTML to match cleaned plain text length
             const cleanLen = plainText.length;
@@ -373,6 +393,7 @@ export function parseQuestions(doc) {
             category: catInfo ? catInfo.category : null,
             posInCategory: catInfo ? catInfo.posInCategory : null,
             categoryInstructions: catInfo ? (catInfo.categoryInstructions || null) : null,
+            categoryReveal: reveal,
             streakRange: isStreakQ ? { start: start.num, end: streakEnd } : null,
             pageNum: qPageNum,
             yPos: qYPos,
@@ -396,6 +417,7 @@ export function parseQuestions(doc) {
           category: catInfo ? catInfo.category : null,
           posInCategory: catInfo ? catInfo.posInCategory : null,
           categoryInstructions: catInfo ? (catInfo.categoryInstructions || null) : null,
+          categoryReveal: reveal,
           pageNum: qPageNum,
           yPos: qYPos,
         });

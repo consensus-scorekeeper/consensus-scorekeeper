@@ -147,6 +147,53 @@ describe('parseDocxParagraphs — two odd-capped streaks share a slot', () => {
   it('reports no issues', () => expect(issues).toEqual([]));
 });
 
+describe('parseDocxParagraphs — mystery reveal note', () => {
+  const { questions, issues } = parseDocxParagraphs([
+    para('Set of 2: Mystery', true),
+    para('What number was worn during Linsanity by Jeremy Lin? ANSWER: 17'),
+    para('What direction lies between NNE and WNW? ANSWER: north-northwest'),
+    para('(The theme was Alfred Hitchcock films.)'),
+    para('Set of 1: End', true),
+    para('Done? ANSWER: yes'),
+  ]);
+
+  it('attaches the reveal to the set\'s last question instead of warning', () => {
+    expect(questions[1].categoryReveal).toBe('(The theme was Alfred Hitchcock films.)');
+    expect(questions[1].answer).toBe('north-northwest');
+    expect(issues).toEqual([]);
+  });
+  it('still warns on non-parenthesized stray text', () => {
+    const { issues: strayIssues } = parseDocxParagraphs([
+      para('Set of 1: Plain', true),
+      para('Q? ANSWER: a'),
+      para('This sentence is not a reveal note.'),
+    ]);
+    expect(strayIssues.some(i => i.code === 'docx-stray-text')).toBe(true);
+  });
+});
+
+describe('parseDocxParagraphs — reveal after a streak', () => {
+  const { questions, issues } = parseDocxParagraphs([
+    para('Streak', true),
+    para('Name up to all four suits in a deck of cards.'),
+    para('A: Hearts'),
+    para('A: Diamonds'),
+    para('A: Clubs'),
+    para('A: Spades'),
+    para('(The theme was card games.)'),
+    para('Set of 1: End', true),
+    para('Done? ANSWER: yes'),
+  ]);
+  it('flushes the streak first, then attaches the reveal to it', () => {
+    const streak = questions.find(q => q.streakRange);
+    expect(streak.streakRange).toEqual({ start: 1, end: 2 });
+    expect(streak.categoryReveal).toBe('(The theme was card games.)');
+    expect(streak.answer.split(' | ')).toHaveLength(4);
+    expect(streak.answer).not.toContain('card games');
+    expect(issues).toEqual([]);
+  });
+});
+
 describe('parseDocxParagraphs — splits', () => {
   const qa = (q, a) => para(`${q} ANSWER: ${a}`);
   const { questions } = parseDocxParagraphs([

@@ -405,10 +405,17 @@ export function docxParagraphsToDoc(paragraphs) {
 
     // Plain paragraph with no ANSWER. At the top of a category it's the
     // moderator instructions (the core captures prose between a bold title
-    // and the first question). Mid-category it's unclassifiable — keep it
-    // out of the doc (it would bleed into the previous answer's text) but
-    // don't let it vanish silently.
-    if (questionsInGroup === 0) {
+    // and the first question). Mid-category, a fully-parenthesized paragraph
+    // is a reveal note — e.g. a Mystery set's "(The theme was Alfred
+    // Hitchcock films.)" — which the core attaches to the preceding question
+    // (a pending streak must flush first so the note follows its lines).
+    // Anything else is unclassifiable — keep it out of the doc (it would
+    // bleed into the previous answer's text) but don't let it vanish
+    // silently.
+    if (/^\(.+\)$/.test(plain) && (streak || questionsInGroup > 0)) {
+      flushStreak();
+      emit(plain);
+    } else if (questionsInGroup === 0) {
       emit(plain);
     } else {
       adapterIssues.push(makeIssue('docx-stray-text', 'warn',

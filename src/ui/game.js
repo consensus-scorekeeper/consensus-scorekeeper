@@ -119,6 +119,23 @@ export function renderQuestion() {
     instrEl.textContent = '';
   }
 
+  // Reveal note that followed this question's answer in the pack (e.g. a
+  // Mystery set's "(The theme was …)"). Streak slots carry it on the source
+  // question, like instructions above.
+  const revealEl = document.getElementById('q-reveal');
+  let revealText = q && q.categoryReveal;
+  if (!revealText && q && q.isStreak && q.streakGroupStart != null) {
+    const sg = state.streakGroups[q.streakGroupStart];
+    revealText = sg && sg.sourceQuestion && sg.sourceQuestion.categoryReveal;
+  }
+  if (revealText) {
+    revealEl.textContent = revealText;
+    revealEl.style.display = 'block';
+  } else {
+    revealEl.style.display = 'none';
+    revealEl.textContent = '';
+  }
+
   if (q && q.isStreak) {
     // Streak group display
     document.getElementById('q-answered-by').style.display = 'none';

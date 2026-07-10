@@ -88,6 +88,15 @@ export function parseTextPack(text) {
       return;
     }
 
+    // A fully-parenthesized line after an answer is a reveal note (e.g. a
+    // Mystery set's "(The theme was Alfred Hitchcock films.)"), not a
+    // category title. State stays 'answer' so the next prose line can still
+    // open a category.
+    if (state === 'answer' && /^\(.+\)$/.test(line)) {
+      specs.push({ text: line, isBold: false, kind: 'reveal', lineNo });
+      return;
+    }
+
     const isCategory = state === 'start' || state === 'answer' || state === 'splits';
     if (!isCategory && state === 'question' && CATEGORY_LIKE_RE.test(line)) {
       // A new category can only start after an answer. A category-looking

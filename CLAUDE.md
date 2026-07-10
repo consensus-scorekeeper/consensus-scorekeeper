@@ -261,6 +261,17 @@ returns `{ questions, issues }` — parsing is *lenient* (a rough pack
 still loads and plays) but every silent failure point emits a structured
 issue instead of vanishing.
 
+Besides `categoryInstructions` (prose between a bold category title and
+its first question), the core captures **reveal notes**: a standalone
+fully-parenthesized line following a question's answer — e.g. a Mystery
+set's "(The theme was Alfred Hitchcock films.)" — lands in that
+question's `categoryReveal` (and is truncated out of the answer text,
+where it would otherwise bleed). The scorekeeper shows it under the
+answer in the question panel (`#q-reveal`). Each adapter routes such
+lines to the core: docx emits parenthesized stray paragraphs instead of
+warning `docx-stray-text`, and the .txt classifier tags them `reveal` so
+they aren't mistaken for a category title.
+
 The file picker (`#pdf-input`, `accept=".pdf,.zip,.docx,.txt"`)
 dispatches in `src/main.js` by extension to a format **adapter**:
 

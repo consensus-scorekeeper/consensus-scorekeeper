@@ -7,6 +7,7 @@
     "category": "5-Part Blitz",
     "posInCategory": 1,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 2,
     "yPos": 619
@@ -19,6 +20,7 @@
     "category": "5-Part Blitz",
     "posInCategory": 2,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 2,
     "yPos": 592
@@ -31,6 +33,7 @@
     "category": "5-Part Blitz",
     "posInCategory": 3,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 2,
     "yPos": 554
@@ -43,6 +46,7 @@
     "category": "5-Part Blitz",
     "posInCategory": 4,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 2,
     "yPos": 527
@@ -55,6 +59,7 @@
     "category": "5-Part Blitz",
     "posInCategory": 5,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 2,
     "yPos": 477
@@ -67,6 +72,7 @@
     "category": "Double Jump",
     "posInCategory": 1,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 2,
     "yPos": 398
@@ -79,6 +85,7 @@
     "category": "Double Jump",
     "posInCategory": 2,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 2,
     "yPos": 371
@@ -91,6 +98,7 @@
     "category": "Double Jump",
     "posInCategory": 1,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 2,
     "yPos": 291
@@ -103,6 +111,7 @@
     "category": "Double Jump",
     "posInCategory": 2,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 2,
     "yPos": 253
@@ -115,6 +124,7 @@
     "category": "Set of 4: Months",
     "posInCategory": 1,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 2,
     "yPos": 173
@@ -127,6 +137,7 @@
     "category": "Set of 4: Months",
     "posInCategory": 2,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 2,
     "yPos": 146
@@ -139,6 +150,7 @@
     "category": "Set of 4: Months",
     "posInCategory": 3,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 2,
     "yPos": 119
@@ -151,6 +163,7 @@
     "category": "Set of 4: Months",
     "posInCategory": 4,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 2,
     "yPos": 92
@@ -163,6 +176,7 @@
     "category": "Jackpot",
     "posInCategory": 1,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "pageNum": 3,
     "yPos": 699
   },
@@ -174,6 +188,7 @@
     "category": "Jackpot",
     "posInCategory": 2,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "pageNum": 3,
     "yPos": 673
   },
@@ -185,6 +200,7 @@
     "category": "Jackpot",
     "posInCategory": 3,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "pageNum": 3,
     "yPos": 658
   },
@@ -196,6 +212,7 @@
     "category": "Jackpot",
     "posInCategory": 4,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 3,
     "yPos": 643
@@ -208,6 +225,7 @@
     "category": "Set of 3: MTV",
     "posInCategory": 1,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 3,
     "yPos": 575
@@ -220,6 +238,7 @@
     "category": "Set of 3: MTV",
     "posInCategory": 2,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 3,
     "yPos": 548
@@ -232,6 +251,7 @@
     "category": "Set of 3: MTV",
     "posInCategory": 3,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 3,
     "yPos": 510
@@ -244,6 +264,7 @@
     "category": "5-Part Blitz",
     "posInCategory": 1,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 3,
     "yPos": 430
@@ -256,6 +277,7 @@
     "category": "5-Part Blitz",
     "posInCategory": 2,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 3,
     "yPos": 392
@@ -268,6 +290,7 @@
     "category": "5-Part Blitz",
     "posInCategory": 3,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 3,
     "yPos": 353
@@ -280,6 +303,7 @@
     "category": "5-Part Blitz",
     "posInCategory": 4,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 3,
     "yPos": 327
@@ -292,6 +316,7 @@
     "category": "5-Part Blitz",
     "posInCategory": 5,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 3,
     "yPos": 300
@@ -304,6 +329,7 @@
     "category": "Splits 1: Pokemon",
     "posInCategory": 1,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 3,
     "yPos": 122
@@ -316,6 +342,7 @@
     "category": "Splits 1: Pokemon",
     "posInCategory": 2,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 3,
     "yPos": 96
@@ -328,6 +355,7 @@
     "category": "Splits 1: Pokemon",
     "posInCategory": 3,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 4,
     "yPos": 727
@@ -340,6 +368,7 @@
     "category": "Splits 1: Pokemon",
     "posInCategory": 4,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 4,
     "yPos": 701
@@ -352,6 +381,7 @@
     "category": "Splits 2: Antarctica",
     "posInCategory": 1,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 4,
     "yPos": 632
@@ -364,6 +394,7 @@
     "category": "Splits 2: Antarctica",
     "posInCategory": 2,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 4,
     "yPos": 606
@@ -376,6 +407,7 @@
     "category": "Splits 2: Antarctica",
     "posInCategory": 3,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 4,
     "yPos": 579
@@ -388,6 +420,7 @@
     "category": "Splits 2: Antarctica",
     "posInCategory": 4,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 4,
     "yPos": 552
@@ -400,6 +433,7 @@
     "category": "Double Jump",
     "posInCategory": 1,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 4,
     "yPos": 484
@@ -412,6 +446,7 @@
     "category": "Double Jump",
     "posInCategory": 2,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 4,
     "yPos": 445
@@ -424,6 +459,7 @@
     "category": "Double Jump",
     "posInCategory": 1,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 4,
     "yPos": 366
@@ -436,6 +472,7 @@
     "category": "Double Jump",
     "posInCategory": 2,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 4,
     "yPos": 339
@@ -448,6 +485,7 @@
     "category": "Set of 4: Nobel Prizes",
     "posInCategory": 1,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 4,
     "yPos": 271
@@ -460,6 +498,7 @@
     "category": "Set of 4: Nobel Prizes",
     "posInCategory": 2,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 4,
     "yPos": 232
@@ -472,6 +511,7 @@
     "category": "Set of 4: Nobel Prizes",
     "posInCategory": 3,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 4,
     "yPos": 205
@@ -484,6 +524,7 @@
     "category": "Set of 4: Nobel Prizes",
     "posInCategory": 4,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 4,
     "yPos": 179
@@ -496,6 +537,7 @@
     "category": "Set of 4",
     "posInCategory": 1,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 4,
     "yPos": 110
@@ -508,6 +550,7 @@
     "category": "Set of 4",
     "posInCategory": 2,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 4,
     "yPos": 72
@@ -520,6 +563,7 @@
     "category": "Set of 4",
     "posInCategory": 3,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 5,
     "yPos": 727
@@ -532,6 +576,7 @@
     "category": "Set of 4",
     "posInCategory": 4,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 5,
     "yPos": 701
@@ -544,6 +589,7 @@
     "category": "5-Part Blitz",
     "posInCategory": 1,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 5,
     "yPos": 632
@@ -556,6 +602,7 @@
     "category": "5-Part Blitz",
     "posInCategory": 2,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 5,
     "yPos": 594
@@ -568,6 +615,7 @@
     "category": "5-Part Blitz",
     "posInCategory": 3,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 5,
     "yPos": 567
@@ -580,6 +628,7 @@
     "category": "5-Part Blitz",
     "posInCategory": 4,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 5,
     "yPos": 529
@@ -592,6 +641,7 @@
     "category": "5-Part Blitz",
     "posInCategory": 5,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 5,
     "yPos": 502
@@ -604,6 +654,7 @@
     "category": "Splits 1: The History of Shakespeare",
     "posInCategory": 1,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 5,
     "yPos": 325
@@ -616,6 +667,7 @@
     "category": "Splits 1: The History of Shakespeare",
     "posInCategory": 2,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 5,
     "yPos": 286
@@ -628,6 +680,7 @@
     "category": "Splits 1: The History of Shakespeare",
     "posInCategory": 3,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 5,
     "yPos": 248
@@ -640,6 +693,7 @@
     "category": "Splits 1: The History of Shakespeare",
     "posInCategory": 4,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 5,
     "yPos": 210
@@ -652,6 +706,7 @@
     "category": "Splits 2: Breads of the World",
     "posInCategory": 1,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 5,
     "yPos": 130
@@ -664,6 +719,7 @@
     "category": "Splits 2: Breads of the World",
     "posInCategory": 2,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 5,
     "yPos": 92
@@ -676,6 +732,7 @@
     "category": "Splits 2: Breads of the World",
     "posInCategory": 3,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 6,
     "yPos": 727
@@ -688,6 +745,7 @@
     "category": "Splits 2: Breads of the World",
     "posInCategory": 4,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 6,
     "yPos": 701
@@ -700,6 +758,7 @@
     "category": "Set of 3: Female Directors",
     "posInCategory": 1,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 6,
     "yPos": 621
@@ -712,6 +771,7 @@
     "category": "Set of 3: Female Directors",
     "posInCategory": 2,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 6,
     "yPos": 583
@@ -724,6 +784,7 @@
     "category": "Set of 3: Female Directors",
     "posInCategory": 3,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 6,
     "yPos": 556
@@ -736,6 +797,7 @@
     "category": "Jailbreak",
     "posInCategory": 1,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 6,
     "yPos": 476
@@ -748,6 +810,7 @@
     "category": "Jailbreak",
     "posInCategory": 2,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 6,
     "yPos": 438
@@ -760,6 +823,7 @@
     "category": "Jailbreak",
     "posInCategory": 3,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 6,
     "yPos": 411
@@ -772,6 +836,7 @@
     "category": "Jailbreak",
     "posInCategory": 4,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 6,
     "yPos": 361
@@ -784,6 +849,7 @@
     "category": "Jailbreak",
     "posInCategory": 5,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 6,
     "yPos": 311
@@ -796,6 +862,7 @@
     "category": "Jailbreak",
     "posInCategory": 6,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 6,
     "yPos": 273
@@ -808,6 +875,7 @@
     "category": "Jailbreak",
     "posInCategory": 7,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 6,
     "yPos": 246
@@ -820,6 +888,7 @@
     "category": "Jailbreak",
     "posInCategory": 8,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 6,
     "yPos": 219
@@ -832,6 +901,7 @@
     "category": "Jailbreak",
     "posInCategory": 9,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 6,
     "yPos": 193
@@ -844,6 +914,7 @@
     "category": "Jailbreak",
     "posInCategory": 10,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 6,
     "yPos": 166
@@ -856,6 +927,7 @@
     "category": "Jailbreak",
     "posInCategory": 11,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 6,
     "yPos": 128
@@ -868,6 +940,7 @@
     "category": "Jailbreak",
     "posInCategory": 12,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 6,
     "yPos": 89
@@ -880,6 +953,7 @@
     "category": "Jailbreak",
     "posInCategory": 13,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 7,
     "yPos": 727
@@ -892,6 +966,7 @@
     "category": "Jailbreak",
     "posInCategory": 14,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 7,
     "yPos": 689
@@ -904,6 +979,7 @@
     "category": "Jackpot",
     "posInCategory": 1,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "pageNum": 7,
     "yPos": 551
   },
@@ -915,6 +991,7 @@
     "category": "Jackpot",
     "posInCategory": 2,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "pageNum": 7,
     "yPos": 525
   },
@@ -926,6 +1003,7 @@
     "category": "Jackpot",
     "posInCategory": 3,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "pageNum": 7,
     "yPos": 498
   },
@@ -937,6 +1015,7 @@
     "category": "Jackpot",
     "posInCategory": 4,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 7,
     "yPos": 471
@@ -949,6 +1028,7 @@
     "category": "Streak",
     "posInCategory": 1,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": {
       "start": 80,
       "end": 81
@@ -964,6 +1044,7 @@
     "category": "Streak",
     "posInCategory": 1,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": {
       "start": 82,
       "end": 84
@@ -979,6 +1060,7 @@
     "category": "Set of 4",
     "posInCategory": 1,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 8,
     "yPos": 657
@@ -991,6 +1073,7 @@
     "category": "Set of 4",
     "posInCategory": 2,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 8,
     "yPos": 630
@@ -1003,6 +1086,7 @@
     "category": "Set of 4",
     "posInCategory": 3,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 8,
     "yPos": 603
@@ -1015,6 +1099,7 @@
     "category": "Set of 4",
     "posInCategory": 4,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 8,
     "yPos": 565
@@ -1027,6 +1112,7 @@
     "category": "12-Part Blitz",
     "posInCategory": 1,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 8,
     "yPos": 496
@@ -1039,6 +1125,7 @@
     "category": "12-Part Blitz",
     "posInCategory": 2,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 8,
     "yPos": 470
@@ -1051,6 +1138,7 @@
     "category": "12-Part Blitz",
     "posInCategory": 3,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 8,
     "yPos": 431
@@ -1063,6 +1151,7 @@
     "category": "12-Part Blitz",
     "posInCategory": 4,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 8,
     "yPos": 405
@@ -1075,6 +1164,7 @@
     "category": "12-Part Blitz",
     "posInCategory": 5,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 8,
     "yPos": 378
@@ -1087,6 +1177,7 @@
     "category": "12-Part Blitz",
     "posInCategory": 6,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 8,
     "yPos": 351
@@ -1099,6 +1190,7 @@
     "category": "12-Part Blitz",
     "posInCategory": 7,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 8,
     "yPos": 313
@@ -1111,6 +1203,7 @@
     "category": "12-Part Blitz",
     "posInCategory": 8,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 8,
     "yPos": 286
@@ -1123,6 +1216,7 @@
     "category": "12-Part Blitz",
     "posInCategory": 9,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 8,
     "yPos": 248
@@ -1135,6 +1229,7 @@
     "category": "12-Part Blitz",
     "posInCategory": 10,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 8,
     "yPos": 209
@@ -1147,6 +1242,7 @@
     "category": "12-Part Blitz",
     "posInCategory": 11,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 8,
     "yPos": 171
@@ -1159,6 +1255,7 @@
     "category": "12-Part Blitz",
     "posInCategory": 12,
     "categoryInstructions": null,
+    "categoryReveal": null,
     "streakRange": null,
     "pageNum": 8,
     "yPos": 144

@@ -85,6 +85,10 @@ C. ANSWERS
        A: Shakespeare
    - One answer line immediately follows each question that has its own
      answer.
+   - If the source has a reveal note after a set's final answer — a
+     parenthesized aside explaining a hidden theme, e.g. a Mystery set's
+     "(The theme was Alfred Hitchcock films.)" — keep it as its own line,
+     wrapped in parentheses, immediately after that answer line.
 
 D. STREAKS (one prompt, many accepted answers)
    - One numbered question line, then one `A: ` line per accepted answer:

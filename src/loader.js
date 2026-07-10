@@ -49,7 +49,7 @@ function applyParseResult({ filename, questions, issues, totalSlots, isPdf, pack
     const cls = errors ? 'error' : warns ? 'warn' : 'success';
     const issueCount = errors + warns;
     setStatus(
-      `Parsed ${questions.length} questions (${totalSlots} slots) from "${filename}".` +
+      `Parsed ${totalSlots} question slots from "${filename}".` +
       (issueCount ? ` ${issueCount} suspected parsing issue${issueCount === 1 ? '' : 's'} — see report below.` : ''),
       cls
     );

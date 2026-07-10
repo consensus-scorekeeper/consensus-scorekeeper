@@ -1055,6 +1055,14 @@ body {
   content: "Category instructions: ";
   font-weight: 600;
 }
+/* Reveal note that follows a question's answer in the pack (e.g. a Mystery
+   set's "(The theme was …)") — moderator-facing, like the answer itself. */
+.question-reveal {
+  font-size: 0.95rem;
+  font-style: italic;
+  color: #6b21a8;
+  margin: 2px 0 4px;
+}
 .inline-pdf {
   flex: 1 1 50%;
   min-width: 0;
