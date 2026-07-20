@@ -9,8 +9,8 @@ import { renderGame } from '../src/ui/game.js';
 import { addPoints, undoLast } from '../src/state.js';
 import { rebuildStreakGroups } from '../src/game/streaks.js';
 import {
-  _setRoomForTest, handleRemoteBuzz, awardPreselect, dismissPreselect,
-  assignBuzzer, assignJoinerToTeam, toggleHold,
+  _setRoomForTest, handleRemoteBuzz, handlePendingBuzz, awardPreselect,
+  dismissPreselect, assignBuzzer, assignJoinerToTeam, toggleHold,
 } from '../src/ui/room.js';
 import { resetState, makeQ } from './helpers.js';
 
@@ -74,6 +74,30 @@ describe('syncRoom message flow', () => {
     toggleHold();
     await tick();
     expect(fake.types()).toContain('arm');
+  });
+});
+
+describe('pending buzz (first arrival, window open)', () => {
+  it('shows the stop-reading cue instantly and hands off to the equalized winner', async () => {
+    renderGame();
+    handlePendingBuzz('Kim Lee');
+    await tick();
+    expect(state.room.pendingBuzz).toBe('Kim Lee');
+    expect(document.getElementById('room-buzz-bar').textContent).toContain('Kim Lee');
+
+    handleRemoteBuzz('Pat'); // equalized winner differs from first arrival
+    await tick();
+    expect(state.room.pendingBuzz).toBeNull();
+    expect(state.room.preselect).toMatchObject({ team: 'b', playerName: 'Pat' });
+  });
+
+  it('ignores pending cues from spectators and while holding', async () => {
+    renderGame();
+    handlePendingBuzz('~watch·x1');
+    expect(state.room.pendingBuzz).toBeNull();
+    state.room.hold = true;
+    handlePendingBuzz('Kim Lee');
+    expect(state.room.pendingBuzz).toBeNull();
   });
 });
 

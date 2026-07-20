@@ -44,8 +44,11 @@ export const state = {
   //   preselect: {joinName, team, playerName, qIndex} for a matched remote
   //              buzz awaiting the moderator's verdict, or
   //              {joinName, unmatched: true, qIndex} awaiting click-to-assign
+  //   pendingBuzz: first-arrival name while the server's arbitration window
+  //              is still open — the STOP-READING cue, shown instantly;
+  //              replaced by the equalized preselect within ~200ms
   //   hold:      moderator's "hold buzzers" override
-  room: { active: false, code: null, connected: [], nameMap: {}, preselect: null, hold: false },
+  room: { active: false, code: null, connected: [], nameMap: {}, preselect: null, pendingBuzz: null, hold: false },
 };
 
 // ==================== SUBSCRIBE ====================

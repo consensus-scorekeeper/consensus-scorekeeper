@@ -20,7 +20,7 @@ export function resetState() {
   state.inlinePdfHidden = false;
   state.jailbreakLocked = { a: [], b: [] };
   state.tutorialMode = false;
-  state.room = { active: false, code: null, connected: [], nameMap: {}, preselect: null, hold: false };
+  state.room = { active: false, code: null, connected: [], nameMap: {}, preselect: null, pendingBuzz: null, hold: false };
 }
 
 // Build a minimal question object with sensible defaults.

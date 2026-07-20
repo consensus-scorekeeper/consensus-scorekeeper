@@ -84,6 +84,7 @@ export async function createAndJoinRoom() {
       rerender();
     },
     onBuzz: (name) => handleRemoteBuzz(name),
+    onBuzzPending: (name) => handlePendingBuzz(name),
   }, serverOverride());
   state.room.active = true;
   state.room.code = code;
@@ -133,8 +134,27 @@ function silentRearm() {
   syncRoom();
 }
 
+// First arrival at the server: the moderator's STOP-READING cue, fired
+// the instant the arbitration window opens. The equalized winner (who
+// may differ) follows in handleRemoteBuzz within ~200ms and replaces
+// this with the real preselect. A safety timeout clears a pending flash
+// that never resolves (e.g. connection drop mid-window).
+let pendingClearTimer = null;
+export function handlePendingBuzz(name) {
+  if (!room || state.room.preselect) return;
+  if (isSpectatorName(name) || state.room.hold) return;
+  state.room.pendingBuzz = name;
+  clearTimeout(pendingClearTimer);
+  pendingClearTimer = setTimeout(() => {
+    if (state.room.pendingBuzz) { state.room.pendingBuzz = null; rerender(); }
+  }, 1500);
+  rerender();
+}
+
 export function handleRemoteBuzz(name) {
   if (!room) return;
+  state.room.pendingBuzz = null;
+  clearTimeout(pendingClearTimer);
   if (isSpectatorName(name) || state.room.hold || !isGameVisible()) return silentRearm();
   if (state.room.preselect) return silentRearm(); // already adjudicating one
   const q = state.questions[state.currentQuestion];
@@ -269,9 +289,14 @@ function renderRoomUI() {
   const bar = document.getElementById('room-buzz-bar');
   if (bar) {
     const ps = state.room.preselect;
-    if (!room || !ps) {
+    if (!room || (!ps && !state.room.pendingBuzz)) {
       bar.style.display = 'none';
       bar.innerHTML = '';
+    } else if (!ps) {
+      // First arrival, arbitration window still open: stop reading NOW.
+      bar.className = 'room-buzz-bar';
+      bar.innerHTML = `&#128276; <strong>${escapeHtml(state.room.pendingBuzz)}</strong> buzzed&hellip;`;
+      bar.style.display = 'block';
     } else if (ps.unmatched) {
       bar.className = 'room-buzz-bar unmatched';
       bar.innerHTML = `&#128276; <strong>${escapeHtml(ps.joinName)}</strong> buzzed &mdash; `
