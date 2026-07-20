@@ -6,7 +6,8 @@
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
-    "serve": "python serve.py"
+    "serve": "python serve.py",
+    "sync-vendored": "node scripts/sync-vendored.mjs"
   },
   "devDependencies": {
     "happy-dom": "^15.11.7",

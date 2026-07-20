@@ -188,6 +188,10 @@
         </div>
         <div class="scoreboard-actions">
           <button class="btn scoreboard-action-btn" data-action="pop-out-scoreboard" title="Open a presentation-style scoreboard in a new window">Pop Out &#x2197;</button>
+          <details class="custom-award" id="room-panel">
+            <summary id="room-summary" title="Phone buzzers: players join with a room code and buzz from their phones">&#128241; Buzzers &#9662;</summary>
+            <div class="custom-award-panel" id="room-panel-body"></div>
+          </details>
           <details class="custom-award" id="custom-award">
             <summary title="Award arbitrary points to any player on any question">+/- Points &#9662;</summary>
             <div class="custom-award-panel">
@@ -206,6 +210,10 @@
 
       <!-- Drag-resize line below the scoreboard. -->
       <div class="splitter splitter-h" id="splitter-scoreboard"></div>
+
+      <!-- Phone-buzzer banner: shown while a remote buzz awaits the
+           moderator's verdict (ui/room.js renders into it). -->
+      <div id="room-buzz-bar" style="display:none"></div>
 
       <!-- Question content + inline PDF as side-by-side columns. The inline-pdf
            is hidden by default (display:none); when shown, the two columns split

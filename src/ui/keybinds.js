@@ -9,12 +9,15 @@
 // - Arrow Left / Right: prev / next question.
 // - Ctrl+Z: undo last scoring action.
 // - C: clear the current question's points.
+// - Space / Enter: award the phone-buzz preselect (+10 / +5 streak);
+//   Esc: dismiss it and re-open the buzzers. No-ops without a preselect.
 //
 // PDF overlay short-circuits this — its own listener (in ui/pdf-viewer.js)
 // owns Esc / arrows while the overlay is open.
 
 import { state, addPoints, undoLast, clearCurrentQuestion } from '../state.js';
 import { isGameVisible } from '../game/persistence.js';
+import { awardPreselect, dismissPreselect } from './room.js';
 
 export function setupKeybinds({ nextQuestion, prevQuestion }) {
   // Window-level capture-phase logger for debugging stuck keys. Toggle on
@@ -35,6 +38,16 @@ export function setupKeybinds({ nextQuestion, prevQuestion }) {
     if (!isGameVisible()) { if (window.DEBUG_KEYS) console.log('[keydown] return: game not visible'); return; }
     const tag = e.target && e.target.tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') { if (window.DEBUG_KEYS) console.log('[keydown] return: focused on', tag); return; }
+
+    // Phone-buzzer preselect verdicts. preventDefault only when consumed —
+    // it also kills the synthesized click a focused button would get.
+    if ((e.key === ' ' || e.key === 'Enter') && !e.ctrlKey && !e.altKey && !e.metaKey) {
+      if (awardPreselect()) { e.preventDefault(); return; }
+    }
+    if (e.key === 'Escape') {
+      if (dismissPreselect()) e.preventDefault();
+      return;
+    }
 
     if (e.key === 'ArrowRight') { e.preventDefault(); nextQuestion(); return; }
     if (e.key === 'ArrowLeft') { e.preventDefault(); prevQuestion(); return; }

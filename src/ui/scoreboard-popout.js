@@ -4,7 +4,7 @@
 // BroadcastChannel; the popout listens and re-renders.
 
 import { state } from '../state.js';
-import { getSplitPair, getCategoryRunSize } from '../game/categories.js';
+import { getSplitPair, getCategoryRunSize, getAnsweredBy } from '../game/categories.js';
 
 const SCOREBOARD_CHANNEL = 'consensus-scoreboard';
 const scoreboardChannel = (typeof BroadcastChannel !== 'undefined') ? new BroadcastChannel(SCOREBOARD_CHANNEL) : null;
@@ -14,8 +14,12 @@ if (scoreboardChannel) {
   };
 }
 
-// Build the live state snapshot the popout renders.
-function getScoreboardSnapshot() {
+// Build the live state snapshot shown to players: rendered by the popout
+// window (BroadcastChannel) AND pushed to phone-buzzer rooms as the
+// {t:'state'} payload (src/ui/room.js). One builder, two transports —
+// anything added here shows up on both. Never include information the
+// players shouldn't see (streak positions stay hidden, see below).
+export function getScoreboardSnapshot() {
   const q = state.questions[state.currentQuestion] || {};
   let posNum = null, posTotal = null;
   // Streaks intentionally show no position counter — revealing "1 of 3"
@@ -33,12 +37,12 @@ function getScoreboardSnapshot() {
     teamA: {
       name: state.teamA.name,
       score: state.teamA.score,
-      players: state.teamA.players.map(p => p.name),
+      players: state.teamA.players.map(p => ({ name: p.name, points: p.points })),
     },
     teamB: {
       name: state.teamB.name,
       score: state.teamB.score,
-      players: state.teamB.players.map(p => p.name),
+      players: state.teamB.players.map(p => ({ name: p.name, points: p.points })),
     },
     qNum: q.num || (state.currentQuestion + 1),
     qTotal: state.questions.length || 100,
@@ -50,6 +54,7 @@ function getScoreboardSnapshot() {
       lockedA: [...state.jailbreakLocked.a],
       lockedB: [...state.jailbreakLocked.b],
     } : null,
+    answered: getAnsweredBy(state.currentQuestion),
   };
 }
 
@@ -248,9 +253,9 @@ const SCOREBOARD_POPOUT_HTML = `<!doctype html>
     if (d.jailbreak) {
       $('ra-name').textContent = d.teamA.name;
       $('rb-name').textContent = d.teamB.name;
-      const buildRoster = (players, locked) => players.map((name, i) => {
+      const buildRoster = (players, locked) => players.map((p, i) => {
         const cls = locked.indexOf(i) !== -1 ? 'locked' : '';
-        const safe = String(name).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const safe = String(p.name).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         return '<li class="' + cls + '">' + safe + '</li>';
       }).join('');
       $('ra-list').innerHTML = buildRoster(d.teamA.players || [], d.jailbreak.lockedA || []);

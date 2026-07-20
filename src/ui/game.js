@@ -12,6 +12,7 @@ import { getInitials, getAnsweredBy } from '../game/categories.js';
 import { saveState } from '../game/persistence.js';
 import { syncInlinePdfToQuestion } from './pdf-viewer.js';
 import { pushScoreboardUpdate } from './scoreboard-popout.js';
+import { reconcileRoom, syncRoom, preselectIndex } from './room.js';
 import { attachDragReorder } from './drag-reorder.js';
 
 // Pads `state.questions` from the flat parsed list to a slot-indexed array
@@ -83,6 +84,7 @@ export function backToSetup() {
 
 export function renderGame() {
   rebuildJailbreakLocks();
+  reconcileRoom();  // drop stale buzz preselects BEFORE panels render
   document.getElementById('game-team-a-name').textContent = state.teamA.name;
   document.getElementById('game-team-b-name').textContent = state.teamB.name;
   document.getElementById('score-a').textContent = state.teamA.score;
@@ -93,6 +95,7 @@ export function renderGame() {
   document.getElementById('undo-btn').disabled = state.history.length === 0;
   saveState();
   pushScoreboardUpdate();
+  syncRoom();  // push snapshot/arm/qlog to phone buzzers + redraw room UI
 }
 
 export function renderQuestion() {
@@ -390,6 +393,13 @@ export function renderPlayerPanel(team) {
   const isStreak = currentQ && currentQ.isStreak;
   const isJailbreak = !!(currentQ && currentQ.category && /jailbreak/i.test(currentQ.category));
   const lockSet = isJailbreak ? state.jailbreakLocked[team] : null;
+  // Phone-buzzer preselect: highlight the row of a matched remote buzz;
+  // while an UNMATCHED buzz is pending, every row becomes a click-to-assign
+  // target (handled by the panel's delegated click listener).
+  const ps = state.room && state.room.preselect;
+  const psAt = ps && !ps.unmatched ? preselectIndex(ps) : null;
+  const buzzedIdx = psAt && psAt.team === team ? psAt.playerIndex : -1;
+  const assignMode = !!(ps && ps.unmatched);
   html += teamObj.players.map((p, i) => {
     // Team A always uses keys 1-4 (indices 0-3); Team B always uses 5-9, 0
     // (indices 0-5). Roster size on the other team does not shift these.
@@ -402,7 +412,9 @@ export function renderPlayerPanel(team) {
     const locked = lockSet && lockSet.includes(i);
     const lockedClass = locked ? ' player-row-locked' : '';
     const lockedTag = locked ? '<span class="player-lock-tag" title="Already buzzed this jailbreak round">locked</span>' : '';
-    return `<div class="player-row${lockedClass}" draggable="true" data-team="${team}" data-index="${i}">
+    const buzzedClass = i === buzzedIdx ? ' player-row-buzzed' : '';
+    const assignClass = assignMode ? ' player-row-assignable' : '';
+    return `<div class="player-row${lockedClass}${buzzedClass}${assignClass}" draggable="true" data-team="${team}" data-index="${i}">
       <span class="drag-handle" aria-hidden="true" title="Drag to reorder">&#x2630;</span>
       ${keybind !== null ? `<span class="player-keybind">${keybind}</span>` : ''}
       <span class="player-name">${escapeHtml(p.name)}</span>
@@ -433,9 +445,18 @@ export function setupGameScreen() {
     if (!panel) continue;
     panel.addEventListener('click', async (e) => {
       const btn = e.target.closest('button[data-action="add-points"]');
-      if (!btn) return;
-      const { addPoints } = await import('../state.js');
-      addPoints(btn.dataset.team, parseInt(btn.dataset.index, 10), parseInt(btn.dataset.points, 10));
+      if (btn) {
+        const { addPoints } = await import('../state.js');
+        addPoints(btn.dataset.team, parseInt(btn.dataset.index, 10), parseInt(btn.dataset.points, 10));
+        return;
+      }
+      // Unmatched phone buzz pending: clicking a player row assigns that
+      // phone to the roster player (see ui/room.js).
+      const row = e.target.closest('.player-row');
+      if (row && state.room && state.room.preselect && state.room.preselect.unmatched) {
+        const { assignBuzzer } = await import('./room.js');
+        assignBuzzer(row.dataset.team, parseInt(row.dataset.index, 10));
+      }
     });
     attachDragReorder(panel, { itemSelector: '.player-row' });
   }

@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Buzz — Consensus Scorekeeper</title>
+<!--
+  Phone page for the buzzer rooms (see src/ui/room.js on the host side).
+  Self-contained on purpose: no module imports, works from any static
+  host. Joins the room server (same relay protocol + default instance as
+  qb-moderator; the DO never inspects our snapshot/qlog payloads) as a
+  player, renders the host's scoreboard snapshot + past-questions log,
+  and sends exactly one message kind: {t:'buzz'}.
+
+  ?code=XXXX  prefill / auto-join a room
+  ?server=…   self-hosted room server
+  ?watch=1    spectator mode — no buzz button, joins under a ~watch·
+              sentinel name the host filters out (never buzzes)
+-->
+<style>
+  :root {
+    --bg: #0f0f10; --raised: #1c1c1f; --input: #151517; --border: #3a3f47;
+    --accent: #2563eb; --text: #c8ccd1; --bright: #f0f0f0; --muted: #9aa0a7;
+    --faint: #808790; --good: #4caf7d; --bad: #e05555;
+    --team-a: #5b9eff; --team-b: #ff7a7a;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body { background: var(--bg); color: var(--text);
+         font: 16px/1.5 -apple-system, "Segoe UI", Roboto, sans-serif;
+         display: flex; flex-direction: column; }
+  .muted { color: var(--muted); font-size: 0.86rem; }
+  .good { color: var(--good); } .bad { color: var(--bad); }
+
+  /* join screen */
+  #join { max-width: 22rem; margin: 14vh auto 0; padding: 0 1.2rem; width: 100%; }
+  #join h1 { font-size: 1.2rem; color: var(--bright); }
+  #join input { width: 100%; padding: 0.8rem; margin: 0.3rem 0 0.7rem; font-size: 1.1rem;
+    background: var(--input); color: var(--text); border: 1px solid var(--border);
+    border-radius: 9px; }
+  #join input#code { text-transform: uppercase; letter-spacing: 0.3em; font-weight: 700; }
+  #join button { width: 100%; padding: 0.9rem; font-size: 1.1rem; font-weight: 700;
+    background: var(--accent); color: #fff; border: none; border-radius: 9px; cursor: pointer; }
+  #joinerr { color: var(--bad); min-height: 1.3em; font-size: 0.9rem; }
+
+  /* game screen */
+  #game { flex: 1; display: none; flex-direction: column; overflow-y: auto; }
+  #topline { display: flex; gap: 0.8rem; align-items: baseline; padding: 0.6rem 1rem;
+    border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--bg); }
+  #topline b { color: var(--bright); letter-spacing: 0.15em; }
+  #pack { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #conn { margin-left: auto; white-space: nowrap; }
+
+  #bigbuzz { flex: 0 0 34vh; margin: 1rem; border: none; border-radius: 22px;
+    font-size: 2.2rem; font-weight: 800; color: #06120b; background: var(--good);
+    cursor: pointer; touch-action: manipulation; transition: background 0.1s; }
+  #bigbuzz.waiting { background: var(--input); color: var(--faint); }
+  #bigbuzz.mine { background: var(--bad); color: #fff; }
+  #bigbuzz.other { background: var(--raised); color: var(--muted); }
+  #bigbuzz.locked { background: var(--input); color: var(--faint);
+    text-decoration: line-through; }
+  body.watch #bigbuzz { display: none; }
+
+  /* scoreboard */
+  #board { padding: 0 1.2rem 0.6rem; }
+  #qline { text-align: center; padding: 0.5rem 0 0.2rem; color: var(--bright); font-weight: 600; }
+  #catline { text-align: center; color: var(--muted); min-height: 1.4em; }
+  #catline .pos { color: var(--faint); margin-left: 6px; }
+  #catline .opt.current { color: #fff; background: var(--accent); border-radius: 6px;
+    padding: 1px 8px; font-weight: 600; }
+  #catline .vs { color: var(--faint); font-size: 0.8em; margin: 0 4px; }
+  #ansline { text-align: center; color: var(--muted); font-size: 0.9rem; min-height: 1.3em; }
+  .bteam { margin-top: 0.7rem; }
+  .bteam .bhead { display: flex; justify-content: space-between; font-weight: 700;
+    color: var(--bright); border-bottom: 1px solid var(--border); padding-bottom: 0.15rem;
+    font-size: 1.1rem; }
+  .bteam.a .bhead span:first-child { color: var(--team-a); }
+  .bteam.b .bhead span:first-child { color: var(--team-b); }
+  .brow { display: flex; justify-content: space-between; padding: 0.18rem 0;
+    color: var(--muted); }
+  .brow.me { color: var(--bright); font-weight: 700; }
+  .brow.locked { opacity: 0.45; text-decoration: line-through; }
+
+  /* past questions */
+  #pastq { padding: 0 1.2rem 1.6rem; }
+  #pastq h2 { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--faint); margin: 0.8rem 0 0.3rem; font-weight: 600; }
+  #pastq details { border-top: 1px solid var(--border); padding: 0.35rem 0; }
+  #pastq summary { cursor: pointer; list-style: none; display: flex; gap: 0.6rem;
+    align-items: baseline; }
+  #pastq summary::before { content: '\25B8'; color: var(--faint); }
+  #pastq details[open] summary::before { content: '\25BE'; }
+  #pastq summary b { color: var(--bright); font-weight: 650; white-space: nowrap; }
+  #pastq summary .sum { color: var(--muted); font-size: 0.88rem; overflow: hidden;
+    text-overflow: ellipsis; white-space: nowrap; }
+  #pastq .qcat { color: var(--faint); font-size: 0.82rem; padding-top: 0.3rem; }
+  #pastq .qbody { font-size: 0.98rem; line-height: 1.65; padding: 0.2rem 0 0.3rem; }
+  #pastq .qans { color: var(--muted); padding-bottom: 0.2rem; }
+  #pastq .qans b, #pastq .qans strong, #pastq .qans u { color: var(--bright); }
+</style>
+</head>
+<body>
+  <div id="join">
+    <h1>Join room</h1>
+    <input id="code" placeholder="CODE" maxlength="4" autocomplete="off">
+    <input id="name" placeholder="Your name" maxlength="40" autocomplete="off">
+    <button id="joinbtn">Join</button>
+    <div id="joinerr"></div>
+  </div>
+
+  <div id="game">
+    <div id="topline">
+      <b id="roomcode"></b>
+      <span class="muted" id="pack"></span>
+      <span class="muted" id="conn">&#9679;</span>
+    </div>
+    <button id="bigbuzz" class="waiting">&hellip;</button>
+    <div id="board">
+      <div id="qline"></div>
+      <div id="catline"></div>
+      <div id="ansline"></div>
+      <div id="teams"></div>
+    </div>
+    <div id="pastq"></div>
+  </div>
+
+<script>
+(() => {
+'use strict';
+const DEFAULT_SERVER = 'https://qb-rooms.denisliu10.workers.dev';
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+const params = new URLSearchParams(location.search);
+const server = params.get('server') || DEFAULT_SERVER;
+const watch = params.get('watch') === '1';
+if (params.get('code')) $('code').value = params.get('code');
+if (localStorage.consensusRoomName) $('name').value = localStorage.consensusRoomName;
+
+let ws = null, me = '', code = '', armed = false, mineBuzz = false;
+let snapshot = null, qlog = [];
+
+if (watch) {
+  document.body.classList.add('watch');
+  $('name').style.display = 'none';
+  $('joinbtn').textContent = 'Watch';
+  // Sentinel name the host filters out of the phones list; random suffix
+  // keeps multiple spectators distinct in the DO roster.
+  me = '~watch·' + Math.random().toString(36).slice(2, 6);
+  if (params.get('code')) { code = params.get('code').toUpperCase(); connect(); }
+}
+
+$('joinbtn').onclick = join;
+$('code').oninput = () => { $('code').value = $('code').value.toUpperCase(); };
+
+function join() {
+  code = $('code').value.trim().toUpperCase();
+  if (!/^[A-Z2-9]{4}$/.test(code)) { $('joinerr').textContent = 'Enter the 4-letter room code.'; return; }
+  if (!watch) {
+    me = $('name').value.trim();
+    if (!me) { $('joinerr').textContent = 'Enter your name.'; return; }
+    if (me.startsWith('~')) { $('joinerr').textContent = 'Names cannot start with ~.'; return; }
+    localStorage.consensusRoomName = me;
+  }
+  connect();
+}
+
+function connect() {
+  const url = server.replace(/^http/, 'ws') +
+    '/rooms/' + code + '/ws?role=player&name=' + encodeURIComponent(me);
+  ws = new WebSocket(url);
+  ws.onopen = () => {
+    $('join').style.display = 'none';
+    $('game').style.display = 'flex';
+    $('roomcode').textContent = code;
+    $('conn').textContent = '●';
+    $('conn').className = 'good';
+  };
+  ws.onmessage = e => {
+    let m; try { m = JSON.parse(e.data); } catch (err) { return; }
+    if (m.t === 'welcome') { armed = m.armed; snapshot = m.snapshot; qlog = m.qlog || []; mineBuzz = false; renderAll(); renderPast(); }
+    else if (m.t === 'qlog') { qlog = m.qlog || []; renderPast(); }
+    else if (m.t === 'arm') { armed = true; mineBuzz = false; vibrate(40); renderBuzz(); }
+    else if (m.t === 'disarm') { armed = false; renderBuzz(); }
+    else if (m.t === 'buzz') {
+      armed = false;
+      if (m.name === me) { mineBuzz = true; vibrate([60, 40, 60]); }
+      renderBuzz(m.name);
+    }
+    else if (m.t === 'rejected') { renderBuzz(); }
+    else if (m.t === 'state') { snapshot = m.snapshot; renderAll(); }
+  };
+  ws.onclose = () => {
+    $('conn').textContent = '○ reconnecting…';
+    $('conn').className = 'bad';
+    setTimeout(connect, 2000);
+  };
+}
+
+function vibrate(p) { try { navigator.vibrate && navigator.vibrate(p); } catch (e) {} }
+
+const norm = s => String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
+
+// My roster spot, matched by name (advisory — the host's assignment map
+// is authoritative; a mismatch just means no highlight/lock display).
+function mySpot() {
+  if (!snapshot) return null;
+  for (const [letter, team] of [['a', snapshot.teamA], ['b', snapshot.teamB]]) {
+    if (!team || !team.players) continue;
+    const i = team.players.findIndex(p => norm(p.name) === norm(me));
+    if (i !== -1) return { letter, index: i };
+  }
+  return null;
+}
+
+function amLocked() {
+  if (!snapshot || !snapshot.jailbreak) return false;
+  const spot = mySpot();
+  if (!spot) return false;
+  const locked = spot.letter === 'a' ? snapshot.jailbreak.lockedA : snapshot.jailbreak.lockedB;
+  return (locked || []).includes(spot.index);
+}
+
+$('bigbuzz').onclick = () => {
+  if (watch || !armed || amLocked() || !ws || ws.readyState !== 1) return;
+  ws.send(JSON.stringify({ t: 'buzz' }));
+};
+
+function renderBuzz(buzzer) {
+  const b = $('bigbuzz');
+  if (mineBuzz) { b.className = 'mine'; b.textContent = 'YOU BUZZED'; }
+  else if (buzzer && !buzzer.startsWith('~')) { b.className = 'other'; b.textContent = buzzer + ' buzzed'; }
+  else if (amLocked()) { b.className = 'locked'; b.textContent = 'locked out'; }
+  else if (armed) { b.className = ''; b.textContent = 'BUZZ'; }
+  else { b.className = 'waiting'; b.textContent = '…'; }
+}
+
+const bareSplit = c => String(c || '').replace(/^Splits \d+:\s*/, '').trim();
+
+function teamBlock(cls, team, lockedIdx) {
+  const spot = mySpot();
+  return `<div class="bteam ${cls}">
+    <div class="bhead"><span>${esc(team.name)}</span><span>${team.score}</span></div>
+    ${(team.players || []).map((p, i) => {
+      const meCls = spot && spot.letter === cls && spot.index === i ? 'me' : '';
+      const lockCls = (lockedIdx || []).includes(i) ? 'locked' : '';
+      return `<div class="brow ${meCls} ${lockCls}"><span>${esc(p.name)}</span><span>${p.points}</span></div>`;
+    }).join('')}
+  </div>`;
+}
+
+function renderAll() {
+  renderBuzz();
+  const d = snapshot;
+  $('pack').textContent = (d && d.packName) || '';
+  if (!d || !d.teamA) { $('teams').innerHTML = ''; $('qline').textContent = ''; return; }
+  document.title = d.teamA.name + ' ' + d.teamA.score + ' — ' + d.teamB.score + ' ' + d.teamB.name;
+
+  $('qline').textContent = 'Question ' + d.qNum + ' / ' + d.qTotal;
+  const pos = (d.posNum && d.posTotal) ? `<span class="pos">(${d.posNum} / ${d.posTotal})</span>` : '';
+  if (d.splitPair) {
+    const cur = bareSplit(d.splitPair.current), other = bareSplit(d.splitPair.partner);
+    const first = d.splitPair.currentNum === 1;
+    const o1 = first ? cur : other, o2 = first ? other : cur;
+    $('catline').innerHTML =
+      `<span class="opt ${first ? 'current' : ''}">${esc(o1)}</span><span class="vs">vs</span>` +
+      `<span class="opt ${first ? '' : 'current'}">${esc(o2)}</span>${pos}`;
+  } else {
+    $('catline').innerHTML = d.category ? esc(d.category) + pos : '';
+  }
+  $('ansline').textContent = d.answered
+    ? 'Answered by ' + d.answered.name + ' (' + d.answered.team + ') +' + d.answered.points
+    : '';
+
+  const jb = d.jailbreak || {};
+  $('teams').innerHTML =
+    teamBlock('a', d.teamA, jb.lockedA) +
+    teamBlock('b', d.teamB, jb.lockedB);
+}
+
+function renderPast() {
+  const el = $('pastq');
+  if (!qlog.length) { el.innerHTML = ''; return; }
+  // answerHtml is host-built, already-escaped markup (parser output).
+  el.innerHTML = '<h2>Past questions</h2>' + qlog.slice().reverse().map(q => `
+    <details>
+      <summary><b>${esc(q.label)}</b><span class="sum">${esc(q.summary)}</span></summary>
+      ${q.category ? `<div class="qcat">${esc(q.category)}</div>` : ''}
+      <div class="qbody">${esc(q.question)}</div>
+      <div class="qans">${q.answerHtml}</div>
+    </details>`).join('');
+}
+})();
+</script>
+</body>
+</html>

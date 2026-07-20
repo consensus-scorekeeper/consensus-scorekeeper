@@ -6,7 +6,7 @@ Scorekeeper and stats viewer for [Consensus](https://consensustrivia.com/) trivi
 
 ## Pages
 
-The repo has four entry points.
+The repo has five entry points.
 
 `index.html` is the scorekeeper. You upload a packet — `.pdf`, a `.zip` of PDFs, a `.docx`, or a plain-text `.txt` — or pick one from the in-app browser of consensustrivia.com, set up rosters, and run the game. PDF packs get an inline PDF viewer for cross-checking; the text-derived formats (`.docx`/`.txt`) are text-only (no viewer). Most of the live scoring is keyboard-driven. "Export CSV" at the end writes one row per player. There's also a Pop Out button that opens a dark, presentation-style scoreboard in a separate window for projecting to players or spectators.
 
@@ -15,6 +15,8 @@ Progress is saved in the browser, and a refresh always lands back on the setup s
 ![Setup screen with Tournament Mode switched on. Team A has a preset roster loaded; Team B's dropdown still says "Pick a team".](docs/screenshots/scorekeeper-setup.png)
 
 ![Pop-out scoreboard window: dark background with both team names and large scores side-by-side, the current question number underneath, and the category line below that.](docs/screenshots/scorekeeper-popout.png)
+
+`player.html` is the phone page for buzzer rooms: players join with a 4-letter room code and get a full-screen buzz button, the live scoreboard, and past questions (see "Phone buzzers" below).
 
 `tournaments/` is a hub page that lists every tournament hosted on the site, with a search box if the list grows. It also links to a "Create its stats page" form for anyone running their own tournament — submitting game CSVs under a fresh slug creates the tournament's page automatically, no code change needed.
 
@@ -47,6 +49,14 @@ The intended workflow during a multi-room tournament:
 Maintainers can also skip the form and drop CSVs straight into `tournaments/<slug>/results/` — the manifest Action runs on any push that touches those folders. If you're testing locally without pushing, `scripts/update_manifests.py` does the same thing by hand.
 
 New tournaments don't need a code change: submitting results under a fresh slug creates the registry entry and stats page automatically in the same pull request. To add one by hand instead, append an entry to `TOURNAMENTS` in `src/ui/roster-presets.js`, then copy `tournaments/stanford-consensus-2026/index.html` into a new folder named after the slug and change the one `<meta name="tournament-slug">` tag inside. Drop CSVs into the new `results/` folder and the hub starts showing it.
+
+## Phone buzzers
+
+Open **📱 Buzzers** in the scoreboard and click **Create room** — you get a 4-letter room code and a player link to share. Everyone who opens the link on their phone gets a full-screen buzz button plus the live scoreboard and a browsable list of past questions (with answers, once the moderator has moved on). First buzz wins: the moderator sees who buzzed, reads the highlighted player, and presses **Space** to award the points (or **Esc** to dismiss and re-open the buzzers — normal scoring keys keep working too). If a phone joins under a name that isn't on a roster, click that player's row once to link them up.
+
+There's also a **spectator link** — the same page without the buzz button — which is the remote version of the Pop Out scoreboard, and a **Hold buzzers** checkbox for when you need the room quiet. Jailbreak lockouts and streak scoring behave the way they do at the table: locked players' buzzes are ignored (buzzers re-open automatically), and streaks stay open for both teams.
+
+Rooms run on a free shared Cloudflare Worker and expire on their own after 12 hours of inactivity. Nothing about your game leaves your browser except the scoreboard the players see. Self-hosters can deploy their own room server (it ships with [qb-moderator](https://github.com/qbsuite/qb-moderator)) and point the app at it with `?roomserver=`.
 
 ## Tournament Mode
 

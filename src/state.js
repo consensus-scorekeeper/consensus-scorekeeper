@@ -35,6 +35,17 @@ export const state = {
   // savePdfBytes early-return so the tutorial doesn't overwrite any
   // saved real game. Transient — defaults to false on every page load.
   tutorialMode: false,
+  // Phone-buzzer room state (src/ui/room.js owns this; src/game/room-logic.js
+  // holds the pure rules). Transient — saveState's whitelist never persists
+  // it, so a page reload leaves the room.
+  //   connected: phone join names currently in the room (spectators excluded)
+  //   nameMap:   join name -> roster player NAME (assignments survive
+  //              drag-reorder because they're stored by name, not index)
+  //   preselect: {joinName, team, playerName, qIndex} for a matched remote
+  //              buzz awaiting the moderator's verdict, or
+  //              {joinName, unmatched: true, qIndex} awaiting click-to-assign
+  //   hold:      moderator's "hold buzzers" override
+  room: { active: false, code: null, connected: [], nameMap: {}, preselect: null, hold: false },
 };
 
 // ==================== SUBSCRIBE ====================

@@ -1359,3 +1359,33 @@ body {
   font-size: 0.85rem;
 }
 .roster-manager-empty { color: #777; font-style: italic; padding: 10px 4px; }
+
+/* ==================== PHONE-BUZZER ROOMS (ui/room.js) ==================== */
+
+/* Banner shown while a remote buzz awaits the moderator's verdict. */
+#room-buzz-bar {
+  margin: 8px 0 0;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: #fef3c7;
+  border: 1px solid #f59e0b;
+  font-size: 1.05rem;
+}
+#room-buzz-bar.unmatched { background: #fee2e2; border-color: #ef4444; }
+
+/* The buzzed player's row in the panels; assignable rows while an
+   unmatched buzz is pending. */
+.player-row-buzzed { outline: 2px solid #f59e0b; background: #fef3c7; border-radius: 6px; }
+.player-row-assignable { cursor: pointer; }
+.player-row-assignable:hover { background: #e0f2fe; }
+
+/* Room panel (inside the scoreboard's details dropdown). */
+.room-code-row { margin-bottom: 8px; }
+.room-code { font-size: 1.2rem; letter-spacing: 0.2em; }
+.room-hint { color: #777; font-size: 0.85rem; margin-bottom: 8px; }
+.room-link-row { display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
+.room-hold-row { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; font-size: 0.9rem; }
+.room-phones { margin-bottom: 8px; max-height: 30vh; overflow-y: auto; }
+.room-phone { padding: 3px 0; font-size: 0.9rem; border-bottom: 1px solid #eee; }
+.room-unassigned { color: #b45309; font-style: italic; }
+.room-x { padding: 0 8px; font-size: 0.85rem; }

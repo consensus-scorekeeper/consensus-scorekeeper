@@ -45,6 +45,10 @@ import {
 } from './ui/game.js';
 import { applyCustomAward, setupDevTools, reparseCurrentPdf as reparsePdfImpl } from './ui/dev-tools.js';
 import { setupKeybinds } from './ui/keybinds.js';
+import {
+  createAndJoinRoom, closeRoom, copyPlayerLink, copySpectatorLink,
+  toggleHold, unassignPhone,
+} from './ui/room.js';
 import { escapeHtml, csvEscape } from './util/escape.js';
 import { buildResultsCsv, buildResultsFilename } from './util/csv.js';
 import { downloadTextFile } from './ui/download.js';
@@ -219,6 +223,12 @@ const ACTION_HANDLERS = {
   'pdf-page-next': () => pdfPageNext(),
   'close-pdf-viewer': () => closePdfViewer(),
   'pop-out-scoreboard': () => popOutScoreboard(),
+  'room-create': () => createAndJoinRoom(),
+  'room-close': () => closeRoom(),
+  'room-copy-player': () => copyPlayerLink(),
+  'room-copy-spectator': () => copySpectatorLink(),
+  'room-hold': () => toggleHold(),
+  'room-unassign': (btn) => unassignPhone(btn.dataset.name),
   'apply-custom-award': () => applyCustomAward(),
   'prev-question': () => prevQuestion(),
   'skip-question': () => skipQuestion(),

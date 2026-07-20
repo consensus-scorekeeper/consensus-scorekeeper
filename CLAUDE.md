@@ -41,6 +41,10 @@ directly.
 
 ```
 index.html                                       ← scorekeeper shell
+player.html                                      ← phone buzzer page (rooms): join by code,
+                                                   full-screen buzz + live scoreboard + past
+                                                   questions; ?watch=1 = spectator (no buzz).
+                                                   Self-contained — no module imports
 stats.html                                       ← legacy redirect → tournaments/
 styles/main.css                                  ← shared stylesheet
 tournaments/
@@ -91,6 +95,9 @@ src/
     streaks.js          ← rebuildStreakGroups
     jailbreak.js        ← rebuildJailbreakLocks
     categories.js       ← getInitials, getAnsweredBy, getSplitPair, getCategoryRunSize
+    room-logic.js       ← PURE phone-buzzer rules: computeDesiredArmed (arm lifecycle),
+                          matchNameToRoster (join-name → roster, by NAME so reorder
+                          can't stale it), buildQlog (spoiler-safe past-questions log)
     persistence.js      ← saveState, loadPdfBytes, savePdfBytes, clearSavedPdfBytes, clearSavedState, isGameVisible
   ui/
     setup.js            ← roster CRUD + Tournament Mode on/off toggle + tournament picker
@@ -110,7 +117,13 @@ src/
     game.js             ← renderGame (single state subscriber), renderQuestion, etc.
     pdf-viewer.js       ← inline + fullscreen pack viewer: pdf.js canvas for PDFs,
                           rendered state.packDoc text for .docx/.txt packs
-    scoreboard-popout.js ← BroadcastChannel + popout HTML template
+    scoreboard-popout.js ← getScoreboardSnapshot (THE shared display snapshot —
+                          rendered by the popout window AND pushed to phone-buzzer
+                          rooms; never put player-hidden info in it) +
+                          BroadcastChannel + popout HTML template
+    room.js             ← phone-buzzer room host: create/close room, remote buzz →
+                          preselect, silent re-arms, syncRoom (snapshot/arm/qlog
+                          push from renderGame), room panel + buzz-bar DOM
     pack-browser.js     ← PACK_CATALOG (consensustrivia, scraper-generated) +
                           GRADWRITE_CATALOG (gradwritetrivia.org, hand-maintained)
                           + renderBrowser + fetchWithFallback (direct fetch when
@@ -150,6 +163,11 @@ src/
                           resolvePreviewContext (meta/query slug + ?preview=),
                           GitHub API URL builders, classifyPull, previewCsvFiles,
                           rawFileUrl (SHA-pinned), previewBannerText
+  vendor/
+    room.js             ← VENDORED room client (createRoom/connectHost) — canonical
+                          copy lives in ../qb-moderator/app/room.js. NEVER edit here:
+                          change it there, then `npm run sync-vendored`
+                          (tests/vendor-sync.test.js enforces byte-equality)
 assets/
   tutorial-pack.pdf     ← bundled pack the tutorial sandbox loads
   sample_txt_pack.txt   ← full 100-slot .txt pack; fixture for tests/text-pack.test.js
@@ -163,6 +181,8 @@ scripts/                ← helpers; run from anywhere (paths use __file__)
                                   change is intended, and review the JSON diff
   process-submission.mjs       ← Node (not Python): drives the results-submission Action;
                                   imports src/util modules directly ("type": "module")
+  sync-vendored.mjs            ← refreshes src/vendor/ from canonical sibling checkouts
+                                  (`npm run sync-vendored`)
 workers/
   pack-proxy/           ← Cloudflare Worker: CORS relay for consensustrivia.com packs
                           (worker.js + wrangler.toml + README.md with deploy steps and
@@ -584,6 +604,48 @@ the canonical repo explicitly (`SUBMISSIONS_REPO` in
 `util/submit-results.js`), never `location.href`, so copies of the site
 still file submissions in the right place.
 
+## Phone buzzers (rooms)
+
+Players join on their phones with a 4-letter room code (`player.html`)
+and get a full-screen buzz button plus the live scoreboard and a
+past-questions browser; a `?watch=1` spectator link shows the same page
+without the buzz button (the remote equivalent of the pop-out
+scoreboard). The moderator creates a room from the 📱 Buzzers dropdown
+in the scoreboard.
+
+- **Server**: the qb-moderator room server — a host-authoritative relay
+  (one Cloudflare Durable Object per room doing atomic first-buzz
+  arbitration + fan-out + late-join snapshots; it never inspects our
+  payloads). Default instance `qb-rooms.denisliu10.workers.dev` (free
+  plan, rooms self-destruct after 12h idle); self-host by deploying
+  `qb-moderator/rooms/` and setting `?roomserver=` or
+  `localStorage['consensus-room-server']`.
+- **Frozen protocol**: player→DO `{t:'buzz'}`; host→DO
+  `{t:'state',snapshot}` / `{t:'arm'}` / `{t:'disarm'}` /
+  `{t:'qlog',qlog}`; DO→client `welcome/join/leave/buzz/rejected` +
+  relays. The client (`src/vendor/room.js`) is vendored byte-identical
+  from `../qb-moderator/app/room.js` — protocol/API changes land THERE
+  first (see its SPEC.md, which names this repo as a consumer).
+- **Game state never leaves this app.** `renderGame` → `syncRoom()`
+  pushes the shared `getScoreboardSnapshot()` (same object the popout
+  renders), diff-sends arm/disarm from `computeDesiredArmed`
+  (armed = current question open for scoring; streaks always armed;
+  preselect/hold/missing → closed), and diff-sends `buildQlog` (answered
+  + no-longer-current only; streak groups only once passed AND scored —
+  the phones must never see the live answer or a streak's remaining
+  part count).
+- **A winning buzz preselects, never scores.** The DO closes the gate,
+  the host matches the join name to the roster (`matchNameToRoster`,
+  explicit assignments stored by NAME in `state.room.nameMap`) and shows
+  a banner + row highlight; Space/Enter awards (+10 / +5 streak), Esc
+  dismisses and re-opens, any other scoring path clears it, unmatched
+  names are assigned by clicking a player row. Buzzes we won't act on
+  (spectator sentinel `~watch…`, hold toggle, jailbreak-locked player,
+  already-answered question) get a SILENT re-arm — force the diff guard
+  (`lastSentArmed = null`) and resync.
+- `state.room` is transient (saveState's whitelist skips it): reloading
+  the page leaves the room.
+
 ## Tests
 
 ```
@@ -629,6 +691,19 @@ transparent to tests. Notable test files:
                                      resolution (meta vs ?slug=, validation), API URL
                                      builders, PR classification, changed-file
                                      filtering, banner copy
+- `room-logic.test.js`             — pure buzzer rules: arm-lifecycle matrix through the
+                                     real reducers, name matching (+reorder survival),
+                                     qlog spoiler rules
+- `room-integration.test.js`       — ui/room.js against a fake room handle: buzz →
+                                     preselect → award → re-arm sequences, silent
+                                     re-arms, click-to-assign, qlog push-on-change
+- `scoreboard-snapshot.test.js`    — the shared popout/rooms snapshot shape + the
+                                     streak no-leak rule
+- `vendor-sync.test.js`            — src/vendor/ byte-identical to canonical sibling
+                                     checkouts (skips when ../qb-moderator is absent)
+- `rooms.e2e.mjs`                  — NOT vitest/CI: live protocol check against the
+                                     deployed room server via the vendored client
+                                     (`node tests/rooms.e2e.mjs`)
 
 If you add stats functionality, add fixtures + assertions there so the
 manifest can't silently drift.
