@@ -67,6 +67,8 @@
 
   /* scoreboard */
   #board { padding: 0 1.2rem 0.6rem; }
+  #buzzline { text-align: center; padding-top: 0.5rem; color: var(--bright); font-weight: 700; }
+  #buzzline:empty { display: none; }
   #qline { text-align: center; padding: 0.5rem 0 0.2rem; color: var(--bright); font-weight: 600; }
   #catline { text-align: center; color: var(--muted); min-height: 1.4em; }
   #catline .pos { color: var(--faint); margin-left: 6px; }
@@ -121,6 +123,7 @@
     </div>
     <button id="bigbuzz" class="waiting">&hellip;</button>
     <div id="board">
+      <div id="buzzline"></div>
       <div id="qline"></div>
       <div id="catline"></div>
       <div id="ansline"></div>
@@ -143,6 +146,9 @@ if (localStorage.consensusRoomName) $('name').value = localStorage.consensusRoom
 
 let ws = null, me = '', code = '', armed = false, mineBuzz = false;
 let sentBuzz = false; // optimistic: our buzz is in flight, verdict pending
+let lastBuzzer = null; // who won the buzz — shown until the next arm, so it
+                       // survives the snapshot re-renders that used to wipe
+                       // it a frame after it appeared
 let roomClosed = false; // host ended the room: stop reconnecting
 let snapshot = null, qlog = [];
 
@@ -189,15 +195,16 @@ function connect() {
     // Echo RTT probes immediately (first, before any rendering) — the
     // server's latency-equalized buzz arbitration depends on them.
     if (m.t === 'ping') { try { ws.send(JSON.stringify({ t: 'pong', n: m.n, ts: m.ts })); } catch (err) {} return; }
-    if (m.t === 'welcome') { armed = m.armed; snapshot = m.snapshot; qlog = m.qlog || []; mineBuzz = false; sentBuzz = false; renderAll(); renderPast(); }
+    if (m.t === 'welcome') { armed = m.armed; snapshot = m.snapshot; qlog = m.qlog || []; mineBuzz = false; sentBuzz = false; lastBuzzer = null; renderAll(); renderPast(); }
     else if (m.t === 'qlog') { qlog = m.qlog || []; renderPast(); }
-    else if (m.t === 'arm') { armed = true; mineBuzz = false; sentBuzz = false; vibrate(40); renderBuzz(); }
+    else if (m.t === 'arm') { armed = true; mineBuzz = false; sentBuzz = false; lastBuzzer = null; vibrate(40); renderBuzz(); }
     else if (m.t === 'disarm') { armed = false; sentBuzz = false; renderBuzz(); }
     else if (m.t === 'buzz') {
       armed = false;
       sentBuzz = false;
+      if (!String(m.name || '').startsWith('~')) lastBuzzer = m.name;
       if (m.name === me) { mineBuzz = true; vibrate([60, 40, 60]); }
-      renderBuzz(m.name);
+      renderBuzz();
     }
     else if (m.t === 'rejected') { sentBuzz = false; renderBuzz(); }
     else if (m.t === 'closed') {
@@ -298,14 +305,16 @@ document.addEventListener('keyup', e => {
   if (keyGuard(e) && buzzMode === 'release') sendBuzz();
 });
 
-function renderBuzz(buzzer) {
+function renderBuzz() {
   const b = $('bigbuzz');
   if (mineBuzz) { b.className = 'mine'; b.textContent = 'YOU BUZZED'; }
-  else if (buzzer && !buzzer.startsWith('~')) { b.className = 'other'; b.textContent = buzzer + ' buzzed'; }
+  else if (lastBuzzer) { b.className = 'other'; b.textContent = lastBuzzer + ' buzzed'; }
   else if (sentBuzz) { b.className = 'mine'; b.textContent = 'BUZZED'; }
   else if (amLocked()) { b.className = 'locked'; b.textContent = 'locked out'; }
   else if (armed) { b.className = ''; b.textContent = 'BUZZ'; }
   else { b.className = 'waiting'; b.textContent = '…'; }
+  // Board line too — spectators have no buzz button to read.
+  $('buzzline').textContent = lastBuzzer ? '\u{1F514} ' + lastBuzzer + ' buzzed' : '';
 }
 
 const bareSplit = c => String(c || '').replace(/^Splits \d+:\s*/, '').trim();
